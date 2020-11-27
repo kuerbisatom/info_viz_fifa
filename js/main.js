@@ -65,6 +65,7 @@ function create_button_row() {
   .attr('class', 'selectpicker show-tick')
   .attr('data-live-search', 'true')
   .attr('data-width', '350')
+  .attr('data-size','8')
   .attr('data-style', 'btn-primary')
   .selectAll("option")
   .data(team)
@@ -200,7 +201,6 @@ function create_lineChart () {
 
   country = create_data("club_20","Real Madrid");
   test = create_lineChart_data(country);
-
   const path = svg.append("g").attr("id","line_g")
   .selectAll("path")
   .data(test)
@@ -366,8 +366,9 @@ function create_areaChart(data, index, node, x, y){
 }
 
 function prepare_button(selector,attribute) {
-  dataset = create_data(selector,attribute);
-  ndataset = create_lineChart_data(dataset);
+  var dataset = create_data(selector,attribute);
+  var ndataset = create_lineChart_data(dataset);
+
   var y_line = d3.scaleLinear()
   .domain([0,100])
   .range([height,0])
@@ -388,7 +389,7 @@ function prepare_button(selector,attribute) {
       .attr("stroke-width", 1.5)
       .attr("stroke-linejoin", "round")
       // .attr("d", d => line(d))
-      .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
+      .attr("d", function (d) { d3.line().curve(d3.curveCatmullRom.alpha(0.5))
                 ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
                 [x_line(new Date(2015,0,1,0)),y_line(d[2016])],
                 [x_line(new Date(2015,0,1,0)),y_line(d[2017])],
@@ -396,14 +397,14 @@ function prepare_button(selector,attribute) {
                 [x_line(new Date(2015,0,1,0)),y_line(d[2019])],
                 [x_line(new Date(2015,0,1,0)),y_line(d[2020])],
               ]
-            )
+            )}
           );
 
 
     g_l
       .selectAll("path")
       .transition() // add a smooth transition
-      .duration(1000)
+      .duration(10000)
       .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
               ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
               [x_line(new Date(2016,0,1,0)),y_line(d[2016])],
@@ -590,81 +591,81 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
 function create_lineChart_data (data) {
   return [{
       type: "overall",
-      2015:d3.mean(country, d => d.overall_15),
-      2016:d3.mean(country, d => d.overall_16),
-      2017:d3.mean(country, d => d.overall_17),
-      2018:d3.mean(country, d => d.overall_18),
-      2019:d3.mean(country, d => d.overall_19),
-      2020:d3.mean(country, d => d.overall_20),
+      2015:d3.mean(data, d => d.overall_15),
+      2016:d3.mean(data, d => d.overall_16),
+      2017:d3.mean(data, d => d.overall_17),
+      2018:d3.mean(data, d => d.overall_18),
+      2019:d3.mean(data, d => d.overall_19),
+      2020:d3.mean(data, d => d.overall_20),
     },
     {
       type: "Defending_Mean",
-      2015:d3.mean(country, d => d.Defending_Mean_15),
-      2016:d3.mean(country, d => d.Defending_Mean_16),
-      2017:d3.mean(country, d => d.Defending_Mean_17),
-      2018:d3.mean(country, d => d.Defending_Mean_18),
-      2019:d3.mean(country, d => d.Defending_Mean_19),
-      2020:d3.mean(country, d => d.Defending_Mean_20),
+      2015:d3.mean(data, d => d.Defending_Mean_15),
+      2016:d3.mean(data, d => d.Defending_Mean_16),
+      2017:d3.mean(data, d => d.Defending_Mean_17),
+      2018:d3.mean(data, d => d.Defending_Mean_18),
+      2019:d3.mean(data, d => d.Defending_Mean_19),
+      2020:d3.mean(data, d => d.Defending_Mean_20),
     },
 
     {
       type: "Attacking_Mean",
-      2015:d3.mean(country, d => d.Attacking_Mean_15),
-      2016:d3.mean(country, d => d.Attacking_Mean_16),
-      2017:d3.mean(country, d => d.Attacking_Mean_17),
-      2018:d3.mean(country, d => d.Attacking_Mean_18),
-      2019:d3.mean(country, d => d.Attacking_Mean_19),
-      2020:d3.mean(country, d => d.Attacking_Mean_20),
+      2015:d3.mean(data, d => d.Attacking_Mean_15),
+      2016:d3.mean(data, d => d.Attacking_Mean_16),
+      2017:d3.mean(data, d => d.Attacking_Mean_17),
+      2018:d3.mean(data, d => d.Attacking_Mean_18),
+      2019:d3.mean(data, d => d.Attacking_Mean_19),
+      2020:d3.mean(data, d => d.Attacking_Mean_20),
     },
 
     {
       type: "Gk_Mean",
-      2015:d3.mean(country, d => d.Gk_Mean_15),
-      2016:d3.mean(country, d => d.Gk_Mean_16),
-      2017:d3.mean(country, d => d.Gk_Mean_17),
-      2018:d3.mean(country, d => d.Gk_Mean_18),
-      2019:d3.mean(country, d => d.Gk_Mean_19),
-      2020:d3.mean(country, d => d.Gk_Mean_20),
+      2015:d3.mean(data, d => d.Gk_Mean_15),
+      2016:d3.mean(data, d => d.Gk_Mean_16),
+      2017:d3.mean(data, d => d.Gk_Mean_17),
+      2018:d3.mean(data, d => d.Gk_Mean_18),
+      2019:d3.mean(data, d => d.Gk_Mean_19),
+      2020:d3.mean(data, d => d.Gk_Mean_20),
     },
 
     {
       type: "Mentality_Mean",
-      2015:d3.mean(country, d => d.Mentality_Mean_15),
-      2016:d3.mean(country, d => d.Mentality_Mean_16),
-      2017:d3.mean(country, d => d.Mentality_Mean_17),
-      2018:d3.mean(country, d => d.Mentality_Mean_18),
-      2019:d3.mean(country, d => d.Mentality_Mean_19),
-      2020:d3.mean(country, d => d.Mentality_Mean_20),
+      2015:d3.mean(data, d => d.Mentality_Mean_15),
+      2016:d3.mean(data, d => d.Mentality_Mean_16),
+      2017:d3.mean(data, d => d.Mentality_Mean_17),
+      2018:d3.mean(data, d => d.Mentality_Mean_18),
+      2019:d3.mean(data, d => d.Mentality_Mean_19),
+      2020:d3.mean(data, d => d.Mentality_Mean_20),
     },
 
     {
       type: "Movement_Mean",
-      2015:d3.mean(country, d => d.Movement_Mean_15),
-      2016:d3.mean(country, d => d.Movement_Mean_16),
-      2017:d3.mean(country, d => d.Movement_Mean_17),
-      2018:d3.mean(country, d => d.Movement_Mean_18),
-      2019:d3.mean(country, d => d.Movement_Mean_19),
-      2020:d3.mean(country, d => d.Movement_Mean_20),
+      2015:d3.mean(data, d => d.Movement_Mean_15),
+      2016:d3.mean(data, d => d.Movement_Mean_16),
+      2017:d3.mean(data, d => d.Movement_Mean_17),
+      2018:d3.mean(data, d => d.Movement_Mean_18),
+      2019:d3.mean(data, d => d.Movement_Mean_19),
+      2020:d3.mean(data, d => d.Movement_Mean_20),
     },
 
     {
       type: "Skill_Mean",
-      2015:d3.mean(country, d => d.Skill_Mean_15),
-      2016:d3.mean(country, d => d.Skill_Mean_16),
-      2017:d3.mean(country, d => d.Skill_Mean_17),
-      2018:d3.mean(country, d => d.Skill_Mean_18),
-      2019:d3.mean(country, d => d.Skill_Mean_19),
-      2020:d3.mean(country, d => d.Skill_Mean_20),
+      2015:d3.mean(data, d => d.Skill_Mean_15),
+      2016:d3.mean(data, d => d.Skill_Mean_16),
+      2017:d3.mean(data, d => d.Skill_Mean_17),
+      2018:d3.mean(data, d => d.Skill_Mean_18),
+      2019:d3.mean(data, d => d.Skill_Mean_19),
+      2020:d3.mean(data, d => d.Skill_Mean_20),
     },
 
     {
       type: "potential",
-      2015:d3.mean(country, d => d.potential_15),
-      2016:d3.mean(country, d => d.potential_16),
-      2017:d3.mean(country, d => d.potential_17),
-      2018:d3.mean(country, d => d.potential_18),
-      2019:d3.mean(country, d => d.potential_19),
-      2020:d3.mean(country, d => d.potential_20),
+      2015:d3.mean(data, d => d.potential_15),
+      2016:d3.mean(data, d => d.potential_16),
+      2017:d3.mean(data, d => d.potential_17),
+      2018:d3.mean(data, d => d.potential_18),
+      2019:d3.mean(data, d => d.potential_19),
+      2020:d3.mean(data, d => d.potential_20),
     },
 
   ];
