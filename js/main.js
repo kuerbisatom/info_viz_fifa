@@ -1,6 +1,6 @@
 var data, country_data, team_data;
 
-var margin = {top: 10, right: 30, bottom: 30, left: 40},
+var margin = {top: 20, right: 30, bottom: 30, left: 60},
 width = 460 - margin.left - margin.right,
 height = 400 - margin.top - margin.bottom;
 
@@ -13,6 +13,8 @@ var selectedLine, selectedViolin;
 var attack_position = ["RW", "LW", "ST", "LF", "RF", "CF", "RS", "LS"];
 var center_position = ["LM", "CM", "RM", "CAM", "RCM", "CDM", "LCM", "LDM", "RDM", "LAM", "RAM"];
 var defend_position = ["LCB", "RCB", "LB", "RB", "CB", "LWB", "RWB" ];
+
+var x_line, y_line;
 
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
@@ -193,6 +195,9 @@ function create_lineChart () {
   .range([0, width])
   .nice();
 
+  x_line = x;
+  y_line = y;
+
   svg.append("g").call(d3.axisLeft(y));
 
   svg.append("g")
@@ -201,16 +206,16 @@ function create_lineChart () {
 
   country = create_data("club_20","Real Madrid");
   test = create_lineChart_data(country);
-  const path = svg.append("g").attr("id","line_g")
+  const g = svg.append("g")
+  const path = g.attr("id","line_g")
   .selectAll("path")
-  .data(test)
-    .join("path")
+  .data(test).enter()
+    path.append("path")
     .style("mix-blend-mode", "multiply")
     .attr("fill", "none")
     .attr("stroke", "grey")
     .attr("stroke-width", 1.5)
     .attr("stroke-linejoin", "round")
-    // .attr("d", d => line(d))
     .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
               ([[x(new Date(2015,0,1,0)),y(d[2015])],
               [x(new Date(2016,0,1,0)),y(d[2016])],
@@ -220,7 +225,17 @@ function create_lineChart () {
               [x(new Date(2020,0,1,0)),y(d[2020])],
             ]
           )
-        );
+        )
+
+    svg
+      .append("text")
+      .attr(
+        "transform",
+        "translate(" + width / 2 + " ," + (height + margin.bottom) + ")"
+      )
+      .attr("class", "label")
+      .attr("style","font-size:12px")
+      .text("Year");
 
     svg_line_chart = svg;
 };
@@ -262,6 +277,18 @@ function create_violinChart () {
   create_areaChart(cen_data, 2, svg, x, y);
   create_areaChart(def_data, 3, svg, x, y);
   create_areaChart(gk_data, 1, svg, x, y);
+
+  svg
+    .append("text")
+    .attr(
+      "transform",
+      "translate(-30 ,-10)"
+    )
+    .attr("class", "label")
+    .attr("style","font-size:12px")
+    .text("height in cm");
+
+  svg_line_chart = svg;
 
   svg_violin_chart = svg;
 };
@@ -317,7 +344,6 @@ function create_areaChart(data, index, node, x, y){
         .y(d => y((d.x0)))
         .curve(d3.curveCatmullRom)
     );
-
   // Add the Boxplot
   var data_sorted = data.map(d => d.height_cm).sort(d3.ascending);
   var q1 = d3.quantile(data_sorted, .25);
@@ -367,6 +393,7 @@ function create_areaChart(data, index, node, x, y){
 
 function prepare_button(selector,attribute) {
   var dataset = create_data(selector,attribute);
+
   var ndataset = create_lineChart_data(dataset);
 
   var y_line = d3.scaleLinear()
@@ -389,37 +416,25 @@ function prepare_button(selector,attribute) {
       .attr("stroke-width", 1.5)
       .attr("stroke-linejoin", "round")
       // .attr("d", d => line(d))
-      .attr("d", function (d) { d3.line().curve(d3.curveCatmullRom.alpha(0.5))
+      .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
                 ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
-                [x_line(new Date(2015,0,1,0)),y_line(d[2016])],
-                [x_line(new Date(2015,0,1,0)),y_line(d[2017])],
-                [x_line(new Date(2015,0,1,0)),y_line(d[2018])],
-                [x_line(new Date(2015,0,1,0)),y_line(d[2019])],
-                [x_line(new Date(2015,0,1,0)),y_line(d[2020])],
+                [x_line(new Date(2016,0,1,0)),y_line(d[2016])],
+                [x_line(new Date(2017,0,1,0)),y_line(d[2017])],
+                [x_line(new Date(2018,0,1,0)),y_line(d[2018])],
+                [x_line(new Date(2019,0,1,0)),y_line(d[2019])],
+                [x_line(new Date(2020,0,1,0)),y_line(d[2020])],
               ]
-            )}
+            )
           );
 
+    g_l.attr("transform","translate(-" + width + " 0)");
 
-    g_l
-      .selectAll("path")
-      .transition() // add a smooth transition
-      .duration(10000)
-      .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
-              ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
-              [x_line(new Date(2016,0,1,0)),y_line(d[2016])],
-              [x_line(new Date(2017,0,1,0)),y_line(d[2017])],
-              [x_line(new Date(2018,0,1,0)),y_line(d[2018])],
-              [x_line(new Date(2019,0,1,0)),y_line(d[2019])],
-              [x_line(new Date(2020,0,1,0)),y_line(d[2020])],
-            ]
-          )
-        );
+    g_l.transition().duration(5000).attr("transform","translate(0, 0)");
 
-    gk_data = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}})
-    def_data = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}})
-    cen_data = dataset.filter(function(d){if (center_position.includes(d.team_position_20)) {return d;}})
-    att_data = dataset.filter(function(d){if (attack_position.includes(d.team_position_20)) {return d;}})
+    gk_data = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}});
+    def_data = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}});
+    cen_data = dataset.filter(function(d){if (center_position.includes(d.team_position_20)) {return d;}});
+    att_data = dataset.filter(function(d){if (attack_position.includes(d.team_position_20)) {return d;}});
 
     var y = d3.scaleLinear()
     .domain(d3.extent(data.map(d => d.height_cm)))
@@ -430,8 +445,8 @@ function prepare_button(selector,attribute) {
     .domain(["Goalkeeper", "Defender", "Center", "Attack"])
     .range([0, width]);
 
-    var g_a = svg_violin_chart.selectAll("#violin-area")
-    var g_b = svg_violin_chart.selectAll("#boxplot")
+    var g_a = svg_violin_chart.selectAll("#violin-area");
+    var g_b = svg_violin_chart.selectAll("#boxplot");
     g_a.selectAll("path").remove();
     g_b.selectAll("line").remove();
     g_b.selectAll("rect").remove();
@@ -445,11 +460,9 @@ function prepare_button(selector,attribute) {
     update_area_Chart(y,x,1,gk_data,g_b,g_a);
 
     prepare_event();
-
 }
 
 function prepare_event() {
-
   dispatch = d3.dispatch("lineEvent");
 
   svg_line_chart.select("#line_g").selectAll("path").on("mouseover", function (event, d) {
@@ -459,6 +472,34 @@ function prepare_event() {
   svg_violin_chart.selectAll("#area").on("mouseover", function (event, d) {
     dispatch.call("lineEvent", this, d);
   });
+
+  svg_line_chart.select("#line_g").selectAll("path").on("mousemove", moved);
+
+  const dot = svg_line_chart.append("g")
+      .attr("display", "none");
+
+  dot.append("circle")
+      .attr("r", 2.5);
+
+  dot.append("text")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+      .attr("text-anchor", "middle")
+      .attr("y", -8);
+
+  function moved(event,d) {
+    event.preventDefault();
+    const pointer = d3.pointer(event, this);
+    const xm = x_line.invert(pointer[0]);
+    const ym = y_line.invert(pointer[1]);
+    dot.attr("display","green")
+    // const i = d3.bisectCenter(data.dates, xm);
+    // const s = d3.least(data.series, d => Math.abs(d.values[i] - ym));
+    // path.attr("stroke", d => d === s ? null : "#ddd").filter(d => d === s).raise();
+    dot.attr("transform", `translate(${pointer[0]},${pointer[1]})`);
+    dot.select("text").text(d.type);
+  }
+
 
   dispatch.on("lineEvent", function (category) {
     // Remove highlight
@@ -494,7 +535,6 @@ function prepare_event() {
 
     selectedViolin = svg_violin_chart.selectAll("#area").filter(function (d) {
         return (d[0].type.includes(category.type)) || category == d;
-        // return (d == category.type) ||
     });
 
     selectedViolin.attr("fill", "blue");
@@ -527,7 +567,7 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
     .range([(index-1)*x.bandwidth(), x.bandwidth()*index])
     .domain([-l_bins_max,l_bins_max]);
 
-    node_a.append("g").attr("id","violin-area")
+    node_a.attr("id","violin-area")
       .append("path")
       .datum(bins)
       .attr("fill", "grey")
@@ -553,7 +593,7 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
     var center = x.bandwidth()*index - x.bandwidth()/2;
     var width = x.bandwidth()/8;
 
-    test = node_b.append("g").attr("id","boxplot");
+    test = node_b.attr("id","boxplot");
 
     test.append("line")
       .attr("x1", center)
@@ -585,7 +625,6 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
         .attr("y1", function(d){ return(y(d))} )
         .attr("y2", function(d){ return(y(d))} )
         .attr("stroke", "black");
-
 }
 
 function create_lineChart_data (data) {
