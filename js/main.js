@@ -237,6 +237,15 @@ function create_lineChart () {
       .attr("style","font-size:12px")
       .text("Year");
 
+      svg
+        .append("text")
+        .attr(
+          "transform",
+          "translate(-30 ,-10)"
+        )
+        .attr("class", "label")
+        .attr("style","font-size:12px")
+        .text("Skill Points");
     svg_line_chart = svg;
 };
 
@@ -286,7 +295,7 @@ function create_violinChart () {
     )
     .attr("class", "label")
     .attr("style","font-size:12px")
-    .text("height in cm");
+    .text("Height [cm]");
 
   svg_line_chart = svg;
 
@@ -474,6 +483,7 @@ function prepare_event() {
   });
 
   svg_line_chart.select("#line_g").selectAll("path").on("mousemove", moved);
+  svg_line_chart.select("#line_g").selectAll("path").on("mousleave", left);
 
   const dot = svg_line_chart.append("g")
       .attr("display", "none");
@@ -499,7 +509,9 @@ function prepare_event() {
     dot.attr("transform", `translate(${pointer[0]},${pointer[1]})`);
     dot.select("text").text(d.type);
   }
-
+  function left() {
+    dot.attr("display", "none");
+  }
 
   dispatch.on("lineEvent", function (category) {
     // Remove highlight
