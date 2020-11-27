@@ -47,21 +47,22 @@ function create_button_row() {
   country = country.filter((v, i, a) => a.indexOf(v) === i);
 
 
-  var button_row = d3.select('#player')
+  var button_row1 = d3.select('#player')
   .append('select')
   .attr('id','p')
   .attr('class', 'selectpicker show-tick')
   .attr('data-live-search', 'true')
   .attr('data-width', '350')
+  .attr('data-size','8')
   .attr('data-style', 'btn-primary')
+  .attr('title', 'Select Player')
   .selectAll("option")
   .data(data)
   .join("option")
   .attr("data-tokens", d => d.sofifa_id)
   .text(d => d.long_name);
 
-
-  var button_row = d3.select('#team')
+  var button_row2 = d3.select('#team')
   .append('select')
   .attr('id','t')
   .attr('class', 'selectpicker show-tick')
@@ -69,6 +70,7 @@ function create_button_row() {
   .attr('data-width', '350')
   .attr('data-size','8')
   .attr('data-style', 'btn-primary')
+  .attr('title', 'Select Team')
   .selectAll("option")
   .data(team)
   .join("option")
@@ -77,13 +79,15 @@ function create_button_row() {
 
 
 
-  var button_row = d3.select('#country')
+  var button_row3 = d3.select('#country')
   .append('select')
   .attr('id','c')
   .attr('class', 'selectpicker show-tick')
   .attr('data-live-search', 'true')
   .attr('data-width', '350')
+  .attr('data-size','8')
   .attr('data-style', 'btn-primary')
+  .attr('title', 'Select Country')
   .selectAll("option")
   .data(country)
   .join("option")
@@ -91,32 +95,23 @@ function create_button_row() {
   .text(d => d);
 
 
-
-
   $('#p').on('change', function(e){
-    //$("select option:selected").css('backgroundColor', '#FFFFF');
-    console.log(this.value,
-      this.options[this.selectedIndex].value,
-      $(this).find("option:selected").val(),);
       prepare_button('long_name',this.value, "p")
     });
 
   $('#t').on('change', function(e){
-      console.log(this.value,
-      this.options[this.selectedIndex].value,
-      $(this).find("option:selected").val(),);
       prepare_button('club_20',this.value, "t");
   });
 
 
   $('#c').on('change', function(e){
-      console.log(this.value,
-      this.options[this.selectedIndex].value,
-      $(this).find("option:selected").val(),);
+      // console.log(this.value,
+      // this.options[this.selectedIndex].value,
+      // $(this).find("option:selected").val(),);
       prepare_button('nationality',this.value, "c");
   });
 
-  $('.selectpicker').selectpicker('refresh');
+  $('.selectpicker').selectpicker('render');
 
 };
 
@@ -251,16 +246,16 @@ function create_lineChart () {
         .attr("style","font-size:12px")
         .text("Skill Points");
 
-        // svg
-        //   .append("text")
-        //   .attr("id","l_display")
-        //   .attr(
-        //     "transform",
-        //     "translate(" + width / 2 + " ,0)"
-        //   )
-        //   .attr("class", "label")
-        //   .attr("style","font-size:12px")
-        //   .text("Real Madrid");
+        svg
+          .append("text")
+          .attr("id","l_display")
+          .attr(
+            "transform",
+            "translate(" + width / 2 + " ,0)"
+          )
+          .attr("class", "label")
+          .attr("style","font-size:12px")
+          .text("Christiano Ronaldo");
 
     svg_line_chart = svg;
 
@@ -316,17 +311,17 @@ function create_violinChart () {
     .attr("class", "label")
     .attr("style","font-size:12px")
     .text("Height [cm]");
-    //
-    // svg
-    //   .append("text")
-    //   .attr("id","v_display")
-    //   .attr(
-    //     "transform",
-    //     "translate(" + width / 2 + " ,0)"
-    //   )
-    //   .attr("class", "label")
-    //   .attr("style","font-size:12px")
-    //   .text("Real Madrid");
+
+    svg
+      .append("text")
+      .attr("id","v_display")
+      .attr(
+        "transform",
+        "translate(" + width / 2 + " ,0)"
+      )
+      .attr("class", "label")
+      .attr("style","font-size:12px")
+      .text("Real Madrid");
 
 
 
@@ -346,7 +341,8 @@ function create_sankeyDiagram() {
 
 function create_areaChart(data, index, node, x, y){
 
-  bins =  d3.bin().thresholds(20)(data.map(d=>d.height_cm))
+  bins =  d3.bin().thresholds(5)(data.map(d=>d.height_cm))
+  console.log(bins)
   bins.map(function (d) {
     switch(index) {
       case 1:
@@ -432,21 +428,14 @@ function create_areaChart(data, index, node, x, y){
 }
 
 function prepare_button(selector,attribute, type) {
+
   var dataset = create_data(selector,attribute);
-  console.log(dataset)
   var ndataset = create_lineChart_data(dataset);
 
-  // svg_line_chart.select("#l_display").remove()
-  // svg_line_chart
-  //   .append("text")
-  //   .attr("id","l_display")
-  //   .attr(
-  //     "transform",
-  //     "translate(" + width / 2 + " ,0)"
-  //   )
-  //   .attr("class", "label")
-  //   .attr("style","font-size:12px")
-  //   .text(attribute);
+
+  svg_line_chart.select("#l_display").text(attribute);
+  attribute = type == "p" ? dataset[0].club_20 : attribute;
+  svg_violin_chart.select("#v_display").text(attribute);
 
   dataset = type == "p" ? create_data("club_20" , dataset[0].club_20) : dataset
   var y_line = d3.scaleLinear()
