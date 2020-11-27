@@ -202,15 +202,15 @@ function create_lineChart () {
   test = create_lineChart_data(country);
 
   const path = svg.append("g")
-  .attr("fill", "none")
-  .attr("stroke", "grey")
-  .attr("stroke-width", 1.5)
-  .attr("stroke-linejoin", "round")
   .selectAll("path")
   .data(test)
     .join("path")
     .style("mix-blend-mode", "multiply")
     .attr("id","line_g")
+    .attr("fill", "none")
+    .attr("stroke", "grey")
+    .attr("stroke-width", 1.5)
+    .attr("stroke-linejoin", "round")
     // .attr("d", d => line(d))
     .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
               ([[x(new Date(2015,0,1,0)),y(d[2015])],
@@ -367,6 +367,7 @@ function create_areaChart(data, index, node, x, y){
 }
 
 function prepare_button(selector,attribute) {
+  console.log(attribute)
   dataset = create_data(selector,attribute);
   ndataset = create_lineChart_data(dataset);
   console.log(dataset);
@@ -386,10 +387,12 @@ function prepare_button(selector,attribute) {
     .attr("id","line_g")
 
 
-
   svg_line_chart.selectAll("#line_g")
       .style("mix-blend-mode", "multiply")
-
+      .attr("fill", "none")
+      .attr("stroke", "grey")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-linejoin", "round")
       .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
               ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
               [x_line(new Date(2015,0,1,0)),y_line(d[2016])],
@@ -432,9 +435,9 @@ function prepare_button(selector,attribute) {
     .range([0, width]);
     console.log(att_data);
     update_area_Chart(y,x,4,att_data);
-    update_area_Chart(y,x,3,cen_data);
-    update_area_Chart(y,x,2,def_data);
-    update_area_Chart(y,x,1,gk_data);
+    //update_area_Chart(y,x,3,cen_data);
+    //update_area_Chart(y,x,2,def_data);
+    //update_area_Chart(y,x,1,gk_data);
 
 
     // // Add the Boxplot
