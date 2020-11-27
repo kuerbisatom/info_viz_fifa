@@ -47,18 +47,18 @@ function create_button_row() {
   country = country.filter((v, i, a) => a.indexOf(v) === i);
 
 
-  // var button_row = d3.select('#player')
-  // .append('select')
-  // .attr('id','p')
-  // .attr('class', 'selectpicker show-tick')
-  // .attr('data-live-search', 'true')
-  // .attr('data-width', '350')
-  // .attr('data-style', 'btn-primary')
-  // .selectAll("option")
-  // .data(data)
-  // .join("option")
-  // .attr("data-tokens", d => d.sofifa_id)
-  // .text(d => d.long_name);
+  var button_row = d3.select('#player')
+  .append('select')
+  .attr('id','p')
+  .attr('class', 'selectpicker show-tick')
+  .attr('data-live-search', 'true')
+  .attr('data-width', '350')
+  .attr('data-style', 'btn-primary')
+  .selectAll("option")
+  .data(data)
+  .join("option")
+  .attr("data-tokens", d => d.sofifa_id)
+  .text(d => d.long_name);
 
 
   var button_row = d3.select('#team')
@@ -77,42 +77,44 @@ function create_button_row() {
 
 
 
-  // var button_row = d3.select('#country')
-  // .append('select')
-  // .attr('id','c')
-  // .attr('class', 'selectpicker show-tick')
-  // .attr('data-live-search', 'true')
-  // .attr('data-width', '350')
-  // .attr('data-style', 'btn-primary')
-  // .selectAll("option")
-  // .data(country)
-  // .join("option")
-  // .attr("data-tokens", d => d)
-  // .text(d => d);
+  var button_row = d3.select('#country')
+  .append('select')
+  .attr('id','c')
+  .attr('class', 'selectpicker show-tick')
+  .attr('data-live-search', 'true')
+  .attr('data-width', '350')
+  .attr('data-style', 'btn-primary')
+  .selectAll("option")
+  .data(country)
+  .join("option")
+  .attr("data-tokens", d => d)
+  .text(d => d);
 
 
 
 
-  // $('#p').on('change', function(e){
-  //   //$("select option:selected").css('backgroundColor', '#FFFFF');
-  //   console.log(this.value,
-  //     this.options[this.selectedIndex].value,
-  //     $(this).find("option:selected").val(),);
-  //   });
+  $('#p').on('change', function(e){
+    //$("select option:selected").css('backgroundColor', '#FFFFF');
+    console.log(this.value,
+      this.options[this.selectedIndex].value,
+      $(this).find("option:selected").val(),);
+      prepare_button('long_name',this.value, "p")
+    });
 
   $('#t').on('change', function(e){
       console.log(this.value,
       this.options[this.selectedIndex].value,
       $(this).find("option:selected").val(),);
-      prepare_button('club_20',this.value)
+      prepare_button('club_20',this.value, "t");
   });
 
 
-  // $('#c').on('change', function(e){
-  //     console.log(this.value,
-  //     this.options[this.selectedIndex].value,
-  //     $(this).find("option:selected").val(),);
-  // });
+  $('#c').on('change', function(e){
+      console.log(this.value,
+      this.options[this.selectedIndex].value,
+      $(this).find("option:selected").val(),);
+      prepare_button('nationality',this.value, "c");
+  });
 
   $('.selectpicker').selectpicker('refresh');
 
@@ -240,13 +242,29 @@ function create_lineChart () {
       svg
         .append("text")
         .attr(
-          "transform",
-          "translate(-30 ,-10)"
+        `transform`,
+        `rotate(-90)`
         )
+        .attr("y",-30)
+        .attr("x", 0-height/2)
         .attr("class", "label")
         .attr("style","font-size:12px")
         .text("Skill Points");
+
+        // svg
+        //   .append("text")
+        //   .attr("id","l_display")
+        //   .attr(
+        //     "transform",
+        //     "translate(" + width / 2 + " ,0)"
+        //   )
+        //   .attr("class", "label")
+        //   .attr("style","font-size:12px")
+        //   .text("Real Madrid");
+
     svg_line_chart = svg;
+
+
 };
 
 function create_violinChart () {
@@ -290,14 +308,27 @@ function create_violinChart () {
   svg
     .append("text")
     .attr(
-      "transform",
-      "translate(-30 ,-10)"
+    `transform`,
+    `rotate(-90)`
     )
+    .attr("y",-30)
+    .attr("x", 0-height/2)
     .attr("class", "label")
     .attr("style","font-size:12px")
     .text("Height [cm]");
+    //
+    // svg
+    //   .append("text")
+    //   .attr("id","v_display")
+    //   .attr(
+    //     "transform",
+    //     "translate(" + width / 2 + " ,0)"
+    //   )
+    //   .attr("class", "label")
+    //   .attr("style","font-size:12px")
+    //   .text("Real Madrid");
 
-  svg_line_chart = svg;
+
 
   svg_violin_chart = svg;
 };
@@ -400,11 +431,24 @@ function create_areaChart(data, index, node, x, y){
 
 }
 
-function prepare_button(selector,attribute) {
+function prepare_button(selector,attribute, type) {
   var dataset = create_data(selector,attribute);
-
+  console.log(dataset)
   var ndataset = create_lineChart_data(dataset);
 
+  // svg_line_chart.select("#l_display").remove()
+  // svg_line_chart
+  //   .append("text")
+  //   .attr("id","l_display")
+  //   .attr(
+  //     "transform",
+  //     "translate(" + width / 2 + " ,0)"
+  //   )
+  //   .attr("class", "label")
+  //   .attr("style","font-size:12px")
+  //   .text(attribute);
+
+  dataset = type == "p" ? create_data("club_20" , dataset[0].club_20) : dataset
   var y_line = d3.scaleLinear()
   .domain([0,100])
   .range([height,0])
