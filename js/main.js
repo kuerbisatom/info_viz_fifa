@@ -16,6 +16,10 @@ var defend_position = ["LCB", "RCB", "LB", "RB", "CB", "LWB", "RWB" ];
 
 var x_line, y_line;
 
+var line_color;
+
+var year = [15,16,17,18,19,20];
+
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
     data = dataset;
@@ -202,27 +206,45 @@ function create_lineChart () {
   .attr("transform", "translate(0, " + height + ")");
 
   country = create_data("club_20","Real Madrid");
-  test = create_lineChart_data(country);
+  line_data = create_lineChart_data(country);
+
+  categories = line_data.series.map(d => d.type);
+  line_color = d3.scaleOrdinal().domain(categories)
+  .range(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00'])
+
+  draw = d3.line()
+    .defined(d => !isNaN(d))
+    .x((d, i) => x(new Date("20" + line_data.dates[i], 0,1,0)))
+    .y(d => y(d))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
   const g = svg.append("g")
   const path = g.attr("id","line_g")
-  .selectAll("path")
-  .data(test).enter()
-    path.append("path")
+  .selectAll("g")
+  .data(line_data.series)
+    .join("g")
+    .attr("id", d=> d.type)
+    .insert("path")
     .style("mix-blend-mode", "multiply")
     .attr("fill", "none")
     .attr("stroke", "grey")
     .attr("stroke-width", 1.5)
     .attr("stroke-linejoin", "round")
-    .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
-              ([[x(new Date(2015,0,1,0)),y(d[2015])],
-              [x(new Date(2016,0,1,0)),y(d[2016])],
-              [x(new Date(2017,0,1,0)),y(d[2017])],
-              [x(new Date(2018,0,1,0)),y(d[2018])],
-              [x(new Date(2019,0,1,0)),y(d[2019])],
-              [x(new Date(2020,0,1,0)),y(d[2020])],
-            ]
-          )
-        )
+    .attr("d",d => draw(d.values))
+
+
+      svg.select("#line_g").selectAll("path").each(function(dat) {
+          //for (i=2015; i<=2020; i++)
+           svg.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
+           .data(dat.values)
+             .join("circle")
+              .attr("id", "highlight")
+              .attr("r", 5)
+              .attr("fill", line_color(dat.type))
+              .attr("cx",(d, i) => x(new Date("20" + line_data.dates[i], 0,1,0)))
+              //.attr("d", d=> console.log(d))
+              .attr("cy",d => y(d));
+        });
 
     svg
       .append("text")
@@ -342,7 +364,6 @@ function create_sankeyDiagram() {
 function create_areaChart(data, index, node, x, y){
 
   bins =  d3.bin().thresholds(5)(data.map(d=>d.height_cm))
-  console.log(bins)
   bins.map(function (d) {
     switch(index) {
       case 1:
@@ -359,7 +380,6 @@ function create_areaChart(data, index, node, x, y){
         break;
       }
   });
-
   var l_bins_max = d3.max(bins.map(d => d.length))
 
   var xNum = d3.scaleLinear()
@@ -447,31 +467,47 @@ function prepare_button(selector,attribute, type) {
   .range([0, width])
   .nice();
 
+
+  draw = d3.line()
+    .defined(d => !isNaN(d))
+    .x((d, i) => x_line(new Date("20" + ndataset.dates[i], 0,1,0)))
+    .y(d => y_line(d))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+
   var g_l = svg_line_chart.selectAll("#line_g");
-  g_l.selectAll("path").remove();
-  g_l.selectAll("path")
-    .data(ndataset)
-      .join("path")
-      .style("mix-blend-mode", "multiply")
-      .attr("fill", "none")
-      .attr("stroke", "grey")
-      .attr("stroke-width", 1.5)
-      .attr("stroke-linejoin", "round")
-      // .attr("d", d => line(d))
-      .attr("d", d => d3.line().curve(d3.curveCatmullRom.alpha(0.5))
-                ([[x_line(new Date(2015,0,1,0)),y_line(d[2015])],
-                [x_line(new Date(2016,0,1,0)),y_line(d[2016])],
-                [x_line(new Date(2017,0,1,0)),y_line(d[2017])],
-                [x_line(new Date(2018,0,1,0)),y_line(d[2018])],
-                [x_line(new Date(2019,0,1,0)),y_line(d[2019])],
-                [x_line(new Date(2020,0,1,0)),y_line(d[2020])],
-              ]
-            )
-          );
+  g_l.selectAll("g").remove();
+  g_l.selectAll("g")
+    .data(ndataset.series)
+    .join("g")
+    .attr("id", d=> d.type)
+    .insert("path")
+    .style("mix-blend-mode", "multiply")
+    .attr("fill", "none")
+    .attr("stroke", "grey")
+    .attr("stroke-width", 1.5)
+    .attr("stroke-linejoin", "round")
+    .attr("d",d => draw(d.values));
+
+    svg_line_chart.select("#line_g").selectAll("path").each(function(dat) {
+        //for (i=2015; i<=2020; i++)
+         svg_line_chart.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
+         .data(dat.values)
+           .join("circle")
+            .attr("id", "highlight")
+            .attr("r", 5)
+            .attr("fill", line_color(dat.type))
+            .attr("cx",(d, i) => x_line(new Date("20" + line_data.dates[i], 0,1,0)))
+            //.attr("d", d=> console.log(d))
+            .attr("cy",d => y_line(d));
+      });
 
     g_l.attr("transform","translate(-" + width + " 0)");
 
     g_l.transition().duration(5000).attr("transform","translate(0, 0)");
+
+
+
 
     gk_data = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}});
     def_data = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}});
@@ -507,7 +543,7 @@ function prepare_button(selector,attribute, type) {
 function prepare_event() {
   dispatch = d3.dispatch("lineEvent");
 
-  svg_line_chart.select("#line_g").selectAll("path").on("mouseover", function (event, d) {
+  svg_line_chart.select("#line_g").selectAll("g").on("mouseover", function (event, d) {
     dispatch.call("lineEvent", this, d);
   });
 
@@ -515,8 +551,15 @@ function prepare_event() {
     dispatch.call("lineEvent", this, d);
   });
 
+  svg_line_chart.selectAll("circle").on("mouseover",show);
+
+  function show(event,d) {
+    //Show Value of Circle
+
+  }
+/*
   svg_line_chart.select("#line_g").selectAll("path").on("mousemove", moved);
-  svg_line_chart.select("#line_g").selectAll("path").on("mousleave", left);
+  svg_line_chart.select("#line_g").selectAll("path").on("mouseleave", left);
 
   const dot = svg_line_chart.append("g")
       .attr("display", "none");
@@ -542,10 +585,11 @@ function prepare_event() {
     dot.attr("transform", `translate(${pointer[0]},${pointer[1]})`);
     dot.select("text").text(d.type);
   }
-  function left() {
+  function left(event,d) {
+    console.log("Leave")
     dot.attr("display", "none");
   }
-
+*/
   dispatch.on("lineEvent", function (category) {
     // Remove highlight
     //if (selectedLine != null) {
@@ -569,7 +613,9 @@ function prepare_event() {
       }
     });
 
-    selectedLine.attr("stroke", "blue");
+    selectedLine.attr("stroke",function(d){
+      return line_color(d.type);
+    });
 
     // Update Area Chart
     if(selectedViolin = null) {
@@ -673,6 +719,52 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
 }
 
 function create_lineChart_data (data) {
+  return {
+    "series": [{
+      type: "overall",
+      values: year.map(y => d3.mean(data, d => d["overall_" +y]))
+    },
+    {
+      type: "Defending_Mean",
+        values: year.map(y => d3.mean(data, d => d["Defending_Mean_" +y]))
+    },
+
+    {
+      type: "Attacking_Mean",
+        values: year.map(y => d3.mean(data, d => d["Attacking_Mean_" +y]))
+    },
+
+    {
+      type: "Gk_Mean",
+        values: year.map(y => d3.mean(data, d => d["Gk_Mean_" +y]))
+    },
+
+    {
+      type: "Mentality_Mean",
+        values: year.map(y => d3.mean(data, d => d["Mentality_Mean_" +y]))
+    },
+
+    {
+      type: "Movement_Mean",
+      values: year.map(y => d3.mean(data, d => d["Movement_Mean_" +y]))
+    },
+
+    {
+      type: "Skill_Mean",
+        values: year.map(y => d3.mean(data, d => d["Skill_Mean_" +y]))
+    },
+
+    {
+      type: "potential",
+        values: year.map(y => d3.mean(data, d => d["potential_" +y]))
+    },
+
+  ],
+  dates: year
+};
+}
+
+/* function create_lineChart_data (data) {
   return [{
       type: "overall",
       2015:d3.mean(data, d => d.overall_15),
@@ -753,4 +845,4 @@ function create_lineChart_data (data) {
     },
 
   ];
-}
+} */
