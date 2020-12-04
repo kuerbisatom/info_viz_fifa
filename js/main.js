@@ -209,8 +209,35 @@ function create_lineChart () {
   line_data = create_lineChart_data(country);
 
   categories = line_data.series.map(d => d.type);
+
   line_color = d3.scaleOrdinal().domain(categories)
   .range(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00'])
+
+  // legend
+  var size = 5
+svg.selectAll("mydots")
+  .data(categories)
+  .enter()
+  .append("rect")
+    .attr("x", function(d,i){ return 6 + i*(size*8+5)})
+    .attr("y",  2) // 100 is where the first dot appears. 25 is the distance between dots
+    .attr("width", size)
+    .attr("height", size)
+    .style("fill", function(d){ return line_color(d)})
+
+// Add one dot in the legend for each name.
+svg.selectAll("mylabels")
+  .data(categories)
+  .enter()
+  .append("text")
+    .attr("style","font-size:8px")
+    .attr("x", function(d,i){ return 6 + i*(size*8+5)})
+    .attr("y", 2 + size*2) // 100 is where the first dot appears. 25 is the distance between dots
+    .style("fill", function(d){ return line_color(d)})
+    .text(function(d){ return d.split("_")[0]})
+    .attr("text-anchor", "left")
+    .style("alignment-baseline", "middle")
+
 
   draw = d3.line()
     .defined(d => !isNaN(d))
@@ -227,7 +254,7 @@ function create_lineChart () {
     .insert("path")
     .style("mix-blend-mode", "multiply")
     .attr("fill", "none")
-    .attr("stroke", "grey")
+    .attr("stroke", d => line_color(d.type))
     .attr("stroke-width", 1.5)
     .attr("stroke-linejoin", "round")
     .attr("d",d => draw(d.values))
@@ -285,7 +312,9 @@ function create_lineChart () {
 };
 
 function create_violinChart () {
-  selected_data = data.filter(function(d){ if (d.club_20 == 'Real Madrid') {return d;}});
+
+
+  selected_data = data.filter(function(d){ if (d.nationality == 'Portugal') {return d;}});
 
   gk_data = selected_data.filter(function(d){if (d.team_position_20 == "GK") {return d;}})
   def_data = selected_data.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}})
@@ -322,6 +351,8 @@ function create_violinChart () {
   create_areaChart(def_data, 3, svg, x, y);
   create_areaChart(gk_data, 1, svg, x, y);
 
+
+
   svg
     .append("text")
     .attr(
@@ -343,9 +374,25 @@ function create_violinChart () {
       )
       .attr("class", "label")
       .attr("style","font-size:12px")
-      .text("Real Madrid");
+      .text("Portugal");
 
 
+
+    g_b = svg.select("#boxplot")
+
+
+      g_b.append("circle")
+          .attr("r", 2.5)
+          .attr("cx", x.bandwidth()*3.5)
+          .attr("cy", y(create_data("long_name","Cristiano Ronaldo dos Santos Aveiro")[0].height_cm))
+
+      g_b.append("text")
+          .attr("font-family", "sans-serif")
+          .attr("font-size", 10)
+          .attr("text-anchor", "middle")
+          .attr("x", x.bandwidth()*3.5)
+          .attr("y", y(create_data("long_name","Cristiano Ronaldo dos Santos Aveiro")[0].height_cm)-10)
+          .text("Christiano Ronaldo");
 
   svg_violin_chart = svg;
 };
@@ -448,16 +495,15 @@ function create_areaChart(data, index, node, x, y){
 }
 
 function prepare_button(selector,attribute, type) {
-
+  temp = attribute;
   var dataset = create_data(selector,attribute);
   var ndataset = create_lineChart_data(dataset);
 
-
   svg_line_chart.select("#l_display").text(attribute);
-  attribute = type == "p" ? dataset[0].club_20 : attribute;
+  attribute = type == "p" ? dataset[0].nationality : type == "t" ? dataset[0].nationality : attribute;
   svg_violin_chart.select("#v_display").text(attribute);
 
-  dataset = type == "p" ? create_data("club_20" , dataset[0].club_20) : dataset
+  dataset = type == "p" ? create_data("nationality" , dataset[0].nationality) : type == "t" ? create_data("nationality",dataset[0].nationality) : dataset
   var y_line = d3.scaleLinear()
   .domain([0,100])
   .range([height,0])
@@ -484,7 +530,7 @@ function prepare_button(selector,attribute, type) {
     .insert("path")
     .style("mix-blend-mode", "multiply")
     .attr("fill", "none")
-    .attr("stroke", "grey")
+    .attr("stroke",d => line_color(d.type))
     .attr("stroke-width", 1.5)
     .attr("stroke-linejoin", "round")
     .attr("d",d => draw(d.values));
@@ -507,7 +553,7 @@ function prepare_button(selector,attribute, type) {
     g_l.transition().duration(5000).attr("transform","translate(0, 0)");
 
 
-
+    console.log(dataset)
 
     gk_data = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}});
     def_data = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}});
@@ -529,6 +575,22 @@ function prepare_button(selector,attribute, type) {
     g_b.selectAll("line").remove();
     g_b.selectAll("rect").remove();
     g_b.selectAll("toto").remove();
+    g_b.selectAll("circle").remove();
+    g_b.selectAll("text").remove();
+
+    console.log(d3.mean(dataset,d => d.height_cm))
+    // g_b.append("circle")
+    //     .attr("r", 2.5)
+    //     .attr("cx", x.bandwidth()*3.5)
+    //     .attr("cy", y(d3.mean(dataset,d => d.height_cm)))
+    //
+    // g_b.append("text")
+    //     .attr("font-family", "sans-serif")
+    //     .attr("font-size", 10)
+    //     .attr("text-anchor", "middle")
+    //     .attr("x", x.bandwidth()*3.5)
+    //     .attr("y", y(d3.mean(dataset,d => d.height_cm))-10)
+    //     .text(temp);
 
     update_area_Chart(y,x,4,att_data,g_b,g_a);
 
@@ -598,7 +660,7 @@ function prepare_event() {
 
     // Update Line Chart
     if (selectedLine != null) {
-      selectedLine.attr("stroke","grey");
+        selectedLine.attr("stroke-width","1.5");
     }
 
     if (selectedViolin != null) {
@@ -613,9 +675,7 @@ function prepare_event() {
       }
     });
 
-    selectedLine.attr("stroke",function(d){
-      return line_color(d.type);
-    });
+    selectedLine.attr("stroke-width","4");
 
     // Update Area Chart
     if(selectedViolin = null) {
