@@ -91,19 +91,19 @@ $(document).ready(function(){
 
     svg_bar_chart.append("g")
     .selectAll("g")
-    .data(data,d => d)
+    .data(data,d => console.log(d))
     .join("g") // for each item, we are appending a rectangle
     .attr("id", "data")
     .selectAll("rect")
     .data(d => d.languageLabel)
     .join("rect")
-    .attr("width", function(d) {console.log(d);return xscale(d.size) - margin.left})
+    .attr("width", function(d) {return xscale(d.count) - margin.left})
     .attr("height", function (d) {
       return 10
     })
     .attr("fill","grey")
     .attr("x", margin.left)
     .attr("y", function (d) {
-      return yscale(d.Label) + yscale.bandwidth()/2 - 1;
+      return yscale(d.language) + yscale.bandwidth()/2 - 1;
     })
 });

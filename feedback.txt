@@ -1,0 +1,17 @@
+violin chart of country
+select a team -> highlight the mean of the team or/ player
+
+Name => Make a box, and fix points
+
+interaction, which has the highest skill
+
+choropleth -> wages, other attributes -> attack.
+
+change label with choropleth map
+
+select year, highlight year
+
+
+not select the one I think make sense select the one which has the highest mean!!!!!
+make text with box
+add text to correct position
