@@ -1,10 +1,10 @@
-var data, country_data, team_data;
+var data, data_w;
 var margin = {top: 20, right: 30, bottom: 30, left: 60},
 width = 460 - margin.left - margin.right,
 height = 400 - margin.top - margin.bottom;
 var dispatch;
-var svg_line_chart, svg_violin_chart;
-var selectedLine, selectedViolin;
+var svg_line_chart, svg_violin_chart, svg_choropleth;
+var selectedLine, selectedViolin, selectedPath;
 var attack_position = ["RW", "LW", "ST", "LF", "RF", "CF", "RS", "LS"];
 var center_position = ["LM", "CM", "RM", "CAM", "RCM", "CDM", "LCM", "LDM", "RDM", "LAM", "RAM"];
 var defend_position = ["LCB", "RCB", "LB", "RB", "CB", "LWB", "RWB" ];
@@ -17,8 +17,10 @@ var year = [15,16,17,18,19,20];
 
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
-    data = dataset;
+    d3.json("./../res/countries-50m.json").then(function(world) {
 
+    data_w = world;
+    data = dataset;
     create_button_row();
 
     create_chloropletMap();
@@ -27,16 +29,14 @@ $(document).ready(function(){
 
     create_lineChart();
 
-    create_sankeyDiagram();
+    //create_sankeyDiagram();
 
     prepare_event();
+  });
+
 
   });
 });
-
-function create_data(selector,attribute) {
-  return data.filter(function (d) { if (d[selector] == attribute) {return d} })
-};
 
 function create_button_row() {
   var country = data.map(d => d.nationality)
@@ -107,6 +107,8 @@ function create_button_row() {
     // console.log(this.value,
     // this.options[this.selectedIndex].value,
     // $(this).find("option:selected").val(),);
+      d3.select("#choropleth").selectAll("path").style("fill","grey");
+      d3.select("path#" + this.value).style("fill","red");
     prepare_button('nationality',this.value, "c");
   });
 
@@ -115,7 +117,7 @@ function create_button_row() {
 };
 
 function create_chloropletMap() {
-  var svg_1 = d3.select('#choropleth')
+  var svg = d3.select('#choropleth')
   .append('svg')
   .attr("width", 2.5*(width) + margin.left + margin.right)
   .attr("height", 1.3*(height) + margin.left + margin.right)
@@ -123,53 +125,54 @@ function create_chloropletMap() {
   .attr("transform",
   "translate(" + margin.left + "," + margin.top + ")");
 
-  /*
-  world = d3.json("./../res/countries-50m.json").then(function(data) {
-  //countries = topojson.feature(data, data.objects.countries);
-  //console.log(countries);
-
-  countries = new Map(data.objects.countries.geometries.map(d => [d.id, d.properties]));
-
-  format = d => `${d}%`;
-
-  path = d3.geoPath();
   var projection = d3.geoMercator()
-  .scale(70)
-  .center([0,20])
-  .translate([width / 2, height / 3]);
+  
+  var path = d3.geoPath()
+    .projection(projection);
 
-  color = d3.scaleQuantize([1, 10], d3.schemeBlues[9]);
+    svg.selectAll("path")
+    .data(topojson.feature(data_w, data_w.objects.countries).features)
+    .enter()
+    .append("path")
+    .attr("d",path)
+    .style("stroke", "black")
+    .style("stroke-width", "0.3px")
+    .style("fill", d => getValue(d.properties.name,"wage_eur_20"))
+    .attr("id", function(datum, index) {
+      return datum.properties.name;
+    });
+    addZoom();
+
+  function addZoom(){
+    d3.select("#choropleth").select("svg").call(
+      d3
+        .zoom()
+        .scaleExtent([1,10])
+        .on("zoom", zoomed)
+    );
+  }
+  function zoomed({ transform}){
+    console.log(transform);
+    d3.select("#choropleth").selectAll("path").attr("transform",transform);
+  }
 
 
-  var svg = d3.select("#test").append("svg")
-  .style("display","block")
-  .attr("viewBox", [0, 0, width, height]);
+  svg_choropleth = svg;
 
-  svg.append("g")
-  .attr("transform", "translate(610, 20)");
-  //       .append(() => legend({color, title: "test",  width: 260}));
-
-  svg.append("g")
-  .selectAll("path")
-  .data(topojson.feature(data, data.objects.countries).features)
-  .join("path")
-  //                              //.attr("fill", d => color(data.get(d.id)))
-  .attr("fill", "grey")
-  .attr("d", path)
-  .append("title")
-  //                                .text(d => `${d.properties.name}, ${countries.get(d.id.slice(0, 2)).name}
-  //                        ${format(data.get(d.id))}`);
-
-  svg.append("path")
-  .datum(topojson.mesh(data, data.objects.countries, (a, b) => a !== b))
-  .attr("fill", "none")
-  .attr("stroke", "white")
-  .attr("stroke-linekoin", "round")
-  .attr("d", path);
-
-});
-*/
 };
+var list = []
+function getValue(country, attribute) {
+  list.push(country);
+
+  nat = create_data("nationality", country);
+
+
+  wage  = nat.map(d => d.wage_eur_20);
+  var myColor = d3.scaleSequential()
+  .domain([d3.min(wage),d3.max(wage)])
+  .interpolator(d3.interpolatePuRd);
+  return myColor(d3.mean(wage));
+}
 
 function create_lineChart () {
   // Line Chart
@@ -307,8 +310,6 @@ function create_lineChart () {
 };
 
 function create_violinChart () {
-
-
   selected_data = data.filter(function(d){ if (d.nationality == 'Portugal') {return d;}});
 
   gk_data = selected_data.filter(function(d){if (d.team_position_20 == "GK") {return d;}})
@@ -392,6 +393,10 @@ function create_violinChart () {
   svg_violin_chart = svg;
 };
 
+function create_data(selector,attribute) {
+  return data.filter(function (d) { if (d[selector] == attribute) {return d} })
+};
+
 function create_sankeyDiagram() {
   var svg = d3.select('#sankey')
   .append('svg')
@@ -402,9 +407,64 @@ function create_sankeyDiagram() {
   "translate(" + margin.left + "," + margin.top + ")");
 
   // create sankey data
-  s_data = create_sankey_data(data)
-  console.log(s_data)
+  var s_data = create_sankey_data(data)
+
+  let f_data = {
+    nodes: [
+        { name: "A1" },
+        { name: "A2" },
+        { name: "B1" }
+        /* snip */
+    ],
+    links: [
+        { source: "A1", target: "B1", value: 27 }
+    ]
+};
+  // console.log(f_data.nodes);
+  // console.log(f_data.links);
+  //
+  // console.log(s_data.nodes);
+  // console.log(s_data.links);
+
   // create sankey
+
+  const sankey = d3
+    .sankey()
+    .size([width, height])
+    .nodeId(d => d.name)
+    .nodeWidth(20)
+    .nodePadding(10)
+    .nodeAlign(d3.sankeyCenter);
+let graph = sankey(s_data);
+
+let links = svg
+    .append("g")
+    .classed("links", true)
+    .selectAll("path")
+    .data(graph.links)
+    .enter()
+    .append("path")
+    .classed("link", true)
+    .attr("d", d3.sankeyLinkHorizontal())
+    .attr("fill", "none")
+    .attr("stroke", "#606060")
+    .attr("stroke-width", d => d.width+1)
+    .attr("stoke-opacity", 0.5);
+
+let nodes = svg
+    .append("g")
+    .classed("nodes", true)
+    .selectAll("rect")
+    .data(graph.nodes)
+    .enter()
+    .append("rect")
+    .classed("node", true)
+    .attr("x", d => d.x0)
+    .attr("y", d => d.y0)
+    .attr("width", d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0)
+    .attr("fill", "blue")
+    .attr("opacity", 0.8);
 
 };
 
@@ -576,8 +636,6 @@ function prepare_button(selector,attribute, type) {
   g_b.selectAll("circle").remove();
   g_b.selectAll("text").remove();
 
-  console.log(t_data)
-  console.log(d3.mean(t_data,d => d.height_cm))
   //Creates the points
   switch (type) {
     case "p":
@@ -673,6 +731,8 @@ function prepare_button(selector,attribute, type) {
 function prepare_event() {
   dispatch = d3.dispatch("lineEvent");
 
+  dispatch_w = d3.dispatch("choroplethEvent");
+
   svg_line_chart.select("#line_g").selectAll("g").on("mouseover", function (event, d) {
     dispatch.call("lineEvent", this, d);
   });
@@ -681,45 +741,25 @@ function prepare_event() {
     dispatch.call("lineEvent", this, d);
   });
 
-  svg_line_chart.selectAll("circle").on("mouseover",show);
+  svg_choropleth.selectAll("path").on("mouseover", function (event, d) {
+    dispatch_w.call("choroplethEvent", this, d)
+  });
 
-  function show(event,d) {
-    //Show Value of Circle
+dispatch_w.on("choroplethEvent", function (country){
+  if (selectedPath != null) {
+    selectedPath.style("stroke", "black");
+    selectedPath.style("stroke-width", "0.3px");
 
-  }
-  /*
-  svg_line_chart.select("#line_g").selectAll("path").on("mousemove", moved);
-  svg_line_chart.select("#line_g").selectAll("path").on("mouseleave", left);
+  };
 
-  const dot = svg_line_chart.append("g")
-  .attr("display", "none");
+  selectedPath = svg_choropleth.selectAll("path").filter(function (d) {
+    return d == country
+  });
 
-  dot.append("circle")
-  .attr("r", 2.5);
+  selectedPath.style("stroke", "white");
+    selectedPath.style("stroke-width", "1px");
+});
 
-  dot.append("text")
-  .attr("font-family", "sans-serif")
-  .attr("font-size", 10)
-  .attr("text-anchor", "middle")
-  .attr("y", -8);
-
-  function moved(event,d) {
-  event.preventDefault();
-  const pointer = d3.pointer(event, this);
-  const xm = x_line.invert(pointer[0]);
-  const ym = y_line.invert(pointer[1]);
-  dot.attr("display","green")
-  // const i = d3.bisectCenter(data.dates, xm);
-  // const s = d3.least(data.series, d => Math.abs(d.values[i] - ym));
-  // path.attr("stroke", d => d === s ? null : "#ddd").filter(d => d === s).raise();
-  dot.attr("transform", `translate(${pointer[0]},${pointer[1]})`);
-  dot.select("text").text(d.type);
-}
-function left(event,d) {
-console.log("Leave")
-dot.attr("display", "none");
-}
-*/
 dispatch.on("lineEvent", function (category) {
   // Remove highlight
   //if (selectedLine != null) {
@@ -898,130 +938,41 @@ function create_lineChart_data (data) {
 }
 
 function create_sankey_data(data) {
-  Array.prototype.inArray = function(comparer) {
-    for(var i=0; i < this.length; i++) {
-        if(comparer(this[i])) return true;
-    }
-    return false;
-};
 
-// adds an element to the array if it does not already exist using a comparer
-// function
-Array.prototype.pushIfNotExist = function(element, comparer) {
-    if (!this.inArray(comparer)) {
-        this.push(element);
-    }
-};
 
   graph = {"nodes" : [], "links" : []};
-  graph.nodes.push({ "name": "Overall"})
-  graph.nodes.push({ "name": "Potential"})
-  graph.nodes.push({ "name": "Movement"})
-  graph.nodes.push({ "name": "GK"})
-  graph.nodes.push({ "name": "Attack"})
-  graph.nodes.push({ "name": "Skill"})
-  graph.nodes.push({ "name": "Defending"})
-  graph.nodes.push({ "name": "Mentality"})
-
-  data.forEach(function (d,i ){
-    if (i == 0) console.log(d);
-    // var element = { "name": d.club_20 }
+  // graph.nodes.push({ "name": "Overall"})
+  // graph.nodes.push({ "name": "Potential"})
+  // graph.nodes.push({ "name": "Movement"})
+  // graph.nodes.push({ "name": "GK"})
+  // graph.nodes.push({ "name": "Attack"})
+  // graph.nodes.push({ "name": "Skill"})
+  // graph.nodes.push({ "name": "Defending"})
+  // graph.nodes.push({ "name": "Mentality"})
+  graph.nodes.push({ "name": "5"})
+  graph.nodes.push({ "name": "4"})
+  graph.nodes.push({ "name": "3"})
+  graph.nodes.push({ "name": "2"})
+  graph.nodes.push({ "name": "1"})
+  var temp_club = []
+  var i = 0;
+  data.forEach(function (d){
+    if (i <= 20)
+    {
+      i++
+      if (!temp_club.includes(d.club_20)){
+      graph.nodes.push({name: d.club_20});
+      temp_club.push(d.club_20);
+    }
+    // var element = { "name": d.team_position_20 }
     // graph.nodes.pushIfNotExist(element, function(e) {
     // return e.name === element.name;
     // });
-    graph.nodes.push({"name": d.club_20});
-    graph.nodes.push({ "name": d.Star_rating_20 });
-    //graph.nodes.push({ "name": d.team_position_20 });
-
-    // graph.links.push({ "source": d.source,
-    //                    "target": d.target,
-    //                    "value": +d.value });
-   });
-   // return only the distinct / unique nodes
-  // graph.nodes = d3.keys(d3.group((function (d) { return d.name; }))
-  //   .object(graph.nodes));
-  console.log(graph.nodes)
-   return graph
+    //club, star, position, skill
+    graph.links.push({ "source": d.club_20,
+                       "target": d.Star_rating_20,
+                       "value": +d.value_eur_20});
 }
-/* function create_lineChart_data (data) {
-return [{
-type: "overall",
-2015:d3.mean(data, d => d.overall_15),
-2016:d3.mean(data, d => d.overall_16),
-2017:d3.mean(data, d => d.overall_17),
-2018:d3.mean(data, d => d.overall_18),
-2019:d3.mean(data, d => d.overall_19),
-2020:d3.mean(data, d => d.overall_20),
-},
-{
-type: "Defending_Mean",
-2015:d3.mean(data, d => d.Defending_Mean_15),
-2016:d3.mean(data, d => d.Defending_Mean_16),
-2017:d3.mean(data, d => d.Defending_Mean_17),
-2018:d3.mean(data, d => d.Defending_Mean_18),
-2019:d3.mean(data, d => d.Defending_Mean_19),
-2020:d3.mean(data, d => d.Defending_Mean_20),
-},
-
-{
-type: "Attacking_Mean",
-2015:d3.mean(data, d => d.Attacking_Mean_15),
-2016:d3.mean(data, d => d.Attacking_Mean_16),
-2017:d3.mean(data, d => d.Attacking_Mean_17),
-2018:d3.mean(data, d => d.Attacking_Mean_18),
-2019:d3.mean(data, d => d.Attacking_Mean_19),
-2020:d3.mean(data, d => d.Attacking_Mean_20),
-},
-
-{
-type: "Gk_Mean",
-2015:d3.mean(data, d => d.Gk_Mean_15),
-2016:d3.mean(data, d => d.Gk_Mean_16),
-2017:d3.mean(data, d => d.Gk_Mean_17),
-2018:d3.mean(data, d => d.Gk_Mean_18),
-2019:d3.mean(data, d => d.Gk_Mean_19),
-2020:d3.mean(data, d => d.Gk_Mean_20),
-},
-
-{
-type: "Mentality_Mean",
-2015:d3.mean(data, d => d.Mentality_Mean_15),
-2016:d3.mean(data, d => d.Mentality_Mean_16),
-2017:d3.mean(data, d => d.Mentality_Mean_17),
-2018:d3.mean(data, d => d.Mentality_Mean_18),
-2019:d3.mean(data, d => d.Mentality_Mean_19),
-2020:d3.mean(data, d => d.Mentality_Mean_20),
-},
-
-{
-type: "Movement_Mean",
-2015:d3.mean(data, d => d.Movement_Mean_15),
-2016:d3.mean(data, d => d.Movement_Mean_16),
-2017:d3.mean(data, d => d.Movement_Mean_17),
-2018:d3.mean(data, d => d.Movement_Mean_18),
-2019:d3.mean(data, d => d.Movement_Mean_19),
-2020:d3.mean(data, d => d.Movement_Mean_20),
-},
-
-{
-type: "Skill_Mean",
-2015:d3.mean(data, d => d.Skill_Mean_15),
-2016:d3.mean(data, d => d.Skill_Mean_16),
-2017:d3.mean(data, d => d.Skill_Mean_17),
-2018:d3.mean(data, d => d.Skill_Mean_18),
-2019:d3.mean(data, d => d.Skill_Mean_19),
-2020:d3.mean(data, d => d.Skill_Mean_20),
-},
-
-{
-type: "potential",
-2015:d3.mean(data, d => d.potential_15),
-2016:d3.mean(data, d => d.potential_16),
-2017:d3.mean(data, d => d.potential_17),
-2018:d3.mean(data, d => d.potential_18),
-2019:d3.mean(data, d => d.potential_19),
-2020:d3.mean(data, d => d.potential_20),
-},
-
-];
-} */
+   });
+  return graph;
+}
