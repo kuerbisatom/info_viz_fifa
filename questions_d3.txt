@@ -3,4 +3,19 @@
 Selectpicker autoselectt and update value
 ## To-Do
 
+no lines circles in line chart appears
 animate boxplot/area chart
+
+Make tooltip fo players name
+
+map + other attirbutes
+
+select year
+
+select player/club select nationality
+
+legend for map (color)
+
+No data when country and club!!!
+
+

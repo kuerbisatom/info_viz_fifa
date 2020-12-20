@@ -1,24 +1,26 @@
-var data, data_w;
+var data, data_w, data_c;
 var margin = {top: 20, right: 30, bottom: 30, left: 60},
 width = 460 - margin.left - margin.right,
 height = 400 - margin.top - margin.bottom;
 var dispatch;
-var svg_line_chart, svg_violin_chart, svg_choropleth;
-var selectedLine, selectedViolin, selectedPath;
+var svg_line_chart, svg_violin_chart, svg_choropleth,svg_sankey;
+var selectedLine, selectedViolin, selectedPath, selectedCountry;
+var temp;
 var attack_position = ["RW", "LW", "ST", "LF", "RF", "CF", "RS", "LS"];
 var center_position = ["LM", "CM", "RM", "CAM", "RCM", "CDM", "LCM", "LDM", "RDM", "LAM", "RAM"];
 var defend_position = ["LCB", "RCB", "LB", "RB", "CB", "LWB", "RWB" ];
 
 var x_line, y_line;
 
-var line_color;
+var line_color,countryColor, sankeyColor;
 
 var year = [15,16,17,18,19,20];
 
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
     d3.json("./../res/countries-50m.json").then(function(world) {
-
+      d3.csv("./../res/country_clubs.csv").then(function(club) {
+    data_c = club
     data_w = world;
     data = dataset;
     create_button_row();
@@ -29,12 +31,12 @@ $(document).ready(function(){
 
     create_lineChart();
 
-    //create_sankeyDiagram();
+    create_sankeyDiagram();
 
     prepare_event();
   });
 
-
+    });
   });
 });
 
@@ -104,11 +106,18 @@ function create_button_row() {
 
 
   $('#c').on('change', function(e){
-    // console.log(this.value,
-    // this.options[this.selectedIndex].value,
-    // $(this).find("option:selected").val(),);
-      d3.select("#choropleth").selectAll("path").style("fill","grey");
-      d3.select("path#" + this.value).style("fill","red");
+      if (selectedCountry != null){
+        selectedCountry.style("stroke", "black");
+        selectedCountry.style("stroke-width", "0.3px");
+      };
+
+      temp = this.value
+      selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
+        return d.properties.name == temp;
+      });
+      selectedCountry.style("stroke", "white");
+      selectedCountry.style("stroke-width", "2px");
+
     prepare_button('nationality',this.value, "c");
   });
 
@@ -121,12 +130,12 @@ function create_chloropletMap() {
   .append('svg')
   .attr("width", 2.5*(width) + margin.left + margin.right)
   .attr("height", 1.3*(height) + margin.left + margin.right)
-  .append("g")
-  .attr("transform",
-  "translate(" + margin.left + "," + margin.top + ")");
+  //.append("g")
+  //.attr("transform",
+  //"translate(" + margin.left + "," + margin.top + ")");
 
-  var projection = d3.geoMercator()
-  
+  var projection = d3.geoMercator();
+
   var path = d3.geoPath()
     .projection(projection);
 
@@ -141,7 +150,7 @@ function create_chloropletMap() {
     .attr("id", function(datum, index) {
       return datum.properties.name;
     });
-    addZoom();
+    //addZoom();
 
   function addZoom(){
     d3.select("#choropleth").select("svg").call(
@@ -152,7 +161,7 @@ function create_chloropletMap() {
     );
   }
   function zoomed({ transform}){
-    console.log(transform);
+    //console.log(transform);
     d3.select("#choropleth").selectAll("path").attr("transform",transform);
   }
 
@@ -160,18 +169,24 @@ function create_chloropletMap() {
   svg_choropleth = svg;
 
 };
-var list = []
+
 function getValue(country, attribute) {
-  list.push(country);
-
   nat = create_data("nationality", country);
-
 
   wage  = nat.map(d => d.wage_eur_20);
   var myColor = d3.scaleSequential()
   .domain([d3.min(wage),d3.max(wage)])
   .interpolator(d3.interpolatePuRd);
-  return myColor(d3.mean(wage));
+
+  mean = d3.mean(wage);
+
+  d3.select("#nationality")
+  .select("g")
+  .datum(mean)
+  .join("g")
+
+  countryColor = myColor;
+  return myColor(mean);
 }
 
 function create_lineChart () {
@@ -203,7 +218,7 @@ function create_lineChart () {
   .call(d3.axisBottom(x))
   .attr("transform", "translate(0, " + height + ")");
 
-  country = create_data("club_20","Real Madrid");
+  country = create_data("nationality","Portugal");
   line_data = create_lineChart_data(country);
 
   categories = line_data.series.map(d => d.type);
@@ -302,7 +317,7 @@ function create_lineChart () {
   )
   .attr("class", "label")
   .attr("style","font-size:12px")
-  .text("Christiano Ronaldo");
+  .text("Portugal");
 
   svg_line_chart = svg;
 
@@ -407,26 +422,14 @@ function create_sankeyDiagram() {
   "translate(" + margin.left + "," + margin.top + ")");
 
   // create sankey data
-  var s_data = create_sankey_data(data)
 
-  let f_data = {
-    nodes: [
-        { name: "A1" },
-        { name: "A2" },
-        { name: "B1" }
-        /* snip */
-    ],
-    links: [
-        { source: "A1", target: "B1", value: 27 }
-    ]
-};
-  // console.log(f_data.nodes);
-  // console.log(f_data.links);
-  //
-  // console.log(s_data.nodes);
-  // console.log(s_data.links);
 
-  // create sankey
+  const color = d3.scaleOrdinal(d3.schemeCategory10);
+  // return d => color(d.category === undefined ? d.name : d.category);
+
+  sankeyColor = color;
+
+  var s_data = create_sankey_data("Portugal")
 
   const sankey = d3
     .sankey()
@@ -447,9 +450,13 @@ let links = svg
     .classed("link", true)
     .attr("d", d3.sankeyLinkHorizontal())
     .attr("fill", "none")
+    .attr("id", function(d,i){
+        d.id = i;
+        return "link-"+i;
+      })
     .attr("stroke", "#606060")
-    .attr("stroke-width", d => d.width+1)
-    .attr("stoke-opacity", 0.5);
+    .attr("stroke-width", d => d.width)
+    .attr("stroke-opacity", 0.5);
 
 let nodes = svg
     .append("g")
@@ -463,8 +470,23 @@ let nodes = svg
     .attr("y", d => d.y0)
     .attr("width", d => d.x1 - d.x0)
     .attr("height", d => d.y1 - d.y0)
-    .attr("fill", "blue")
+    .attr("fill", d => color(d.name))
     .attr("opacity", 0.8);
+
+    svg.append("g")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+    .selectAll("text")
+    .data(graph.nodes)
+    .join("text")
+      .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+      .attr("y", d => (d.y1 + d.y0) / 2)
+      .attr("dy", "0.35em")
+      .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+      .text(d => d.name);
+
+
+    svg_sankey = svg;
 
 };
 
@@ -559,9 +581,12 @@ function prepare_button(selector,attribute, type) {
   var dataset = create_data(selector,attribute);
   var t_data = dataset;
   var ndataset = create_lineChart_data(dataset);
-
+  var country;
+  if ("t" === type){
+    country = data_c.filter(function (d) {if (d.Club == attribute) {return d}})
+  }
   svg_line_chart.select("#l_display").text(attribute);
-  attribute = type == "p" ? dataset[0].nationality : type == "t" ? dataset[0].nationality : attribute;
+  attribute = type == "p" ? dataset[0].nationality : type == "t" ? country[0].Country : attribute;
   svg_violin_chart.select("#v_display").text(attribute);
 
   dataset = type == "p" ? create_data("nationality" , dataset[0].nationality) : type == "t" ? create_data("nationality",dataset[0].nationality) : dataset
@@ -715,7 +740,7 @@ function prepare_button(selector,attribute, type) {
   }
 
 
-  //Creates the Violun Chart + boxplot
+  //Creates the Violin Chart + boxplot
   if (att_data.length != 0) {update_area_Chart(y,x,4,att_data,g_b,g_a);};
 
   if (cen_data.length != 0) {update_area_Chart(y,x,3,cen_data,g_b,g_a);};
@@ -724,14 +749,103 @@ function prepare_button(selector,attribute, type) {
 
   if (gk_data.length != 0) {update_area_Chart(y,x,1,gk_data,g_b,g_a);};
 
-
+  if (type == "p"){
+    attribute = data_c.filter(function (d)  {if (d.Club == dataset[0].club_20) {return d;}})[0].Country
+  }
+  update_sankey_diagram(attribute);
   prepare_event();
+}
+
+function update_sankey_diagram(country){
+
+  svg_sankey.selectAll("g").remove();
+  var s_data = create_sankey_data(country)
+
+  if (s_data.nodes.length == 0) {
+
+    svg_sankey.append("g")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", height / 2)
+      .attr("dy", "0.35em")
+      .style("color", "red")
+      //.attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+      .text(`No data for ${country} available`);
+
+  } else {
+  const sankey = d3
+    .sankey()
+    .size([width, height])
+    .nodeId(d => d.name)
+    .nodeWidth(20)
+    .nodePadding(10)
+    .nodeAlign(d3.sankeyCenter);
+let graph = sankey(s_data);
+
+let links = svg_sankey
+    .append("g")
+    .classed("links", true)
+    .selectAll("path")
+    .data(graph.links)
+    .enter()
+    .append("path")
+    .classed("link", true)
+    .attr("d", d3.sankeyLinkHorizontal())
+    .attr("id", function(d,i){
+        d.id = i;
+        return "link-"+i;
+      })
+    .attr("fill", "none")
+    .attr("stroke", "#606060")
+    .attr("stroke-width", d => d.width)
+    .attr("stroke-opacity", 0.5);
+
+let nodes = svg_sankey
+    .append("g")
+    .classed("nodes", true)
+    .selectAll("rect")
+    .data(graph.nodes)
+    .enter()
+    .append("rect")
+    .classed("node", true)
+    .attr("x", d => d.x0)
+    .attr("y", d => d.y0)
+    .attr("width", d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0)
+    .attr("fill", d => sankeyColor(d.name))
+    .attr("opacity", 0.8);
+
+    svg_sankey.append("g")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+    .selectAll("text")
+    .data(graph.nodes)
+    .join("text")
+      .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+      .attr("y", d => (d.y1 + d.y0) / 2)
+      .attr("dy", "0.35em")
+      .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+      .text(d => d.name);
+    }
 }
 
 function prepare_event() {
   dispatch = d3.dispatch("lineEvent");
 
   dispatch_w = d3.dispatch("choroplethEvent");
+
+  dispatch_s = d3.dispatch("choroplethSelect");
+
+  dispatch_sa = d3.dispatch("sankeyEvent");
+
+  svg_sankey.select("g.links").selectAll("path").on("mouseover", function (event, d) {
+    dispatch_sa.call("sankeyEvent", this, d);
+  });
+  svg_sankey.select("g.nodes").selectAll("rect").on("mouseover", function (event, d) {
+    dispatch_sa.call("sankeyEvent", this, d);
+  });
 
   svg_line_chart.select("#line_g").selectAll("g").on("mouseover", function (event, d) {
     dispatch.call("lineEvent", this, d);
@@ -742,22 +856,44 @@ function prepare_event() {
   });
 
   svg_choropleth.selectAll("path").on("mouseover", function (event, d) {
-    dispatch_w.call("choroplethEvent", this, d)
+    dispatch_w.call("choroplethEvent", this, d);
   });
 
+  svg_choropleth.selectAll("path").on("click", function (event, d) {
+    dispatch_s.call("choroplethSelect", this, d);
+  });
+
+dispatch_s.on("choroplethSelect", function (country) {
+  if (selectedCountry != null){
+    selectedCountry.style("stroke", "black");
+    selectedCountry.style("stroke-width", "0.3px");
+  };
+
+  selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
+    return d == country;
+  });
+
+  temp = country.properties.name;
+  selectedCountry.style("stroke", "white");
+  selectedCountry.style("stroke-width", "2px");
+
+  prepare_button('nationality',country.properties.name, "c");
+
+});
+
 dispatch_w.on("choroplethEvent", function (country){
-  if (selectedPath != null) {
+  if (selectedPath != null && selectedPath.datum().properties.name != temp) {
     selectedPath.style("stroke", "black");
     selectedPath.style("stroke-width", "0.3px");
-
   };
 
   selectedPath = svg_choropleth.selectAll("path").filter(function (d) {
     return d == country
   });
-
+  if (selectedPath.datum().properties.name != temp){
   selectedPath.style("stroke", "white");
     selectedPath.style("stroke-width", "1px");
+    }
 });
 
 dispatch.on("lineEvent", function (category) {
@@ -804,6 +940,9 @@ dispatch.on("lineEvent", function (category) {
   });
 
 });
+
+dispatch_sa.on("sankeyEvent", function (data) {
+})
 };
 
 function update_area_Chart(y,x,index,data,node_b, node_a) {
@@ -937,42 +1076,135 @@ function create_lineChart_data (data) {
 };
 }
 
-function create_sankey_data(data) {
-
-
+function create_sankey_data(country) {
   graph = {"nodes" : [], "links" : []};
-  // graph.nodes.push({ "name": "Overall"})
-  // graph.nodes.push({ "name": "Potential"})
-  // graph.nodes.push({ "name": "Movement"})
-  // graph.nodes.push({ "name": "GK"})
-  // graph.nodes.push({ "name": "Attack"})
-  // graph.nodes.push({ "name": "Skill"})
-  // graph.nodes.push({ "name": "Defending"})
-  // graph.nodes.push({ "name": "Mentality"})
-  graph.nodes.push({ "name": "5"})
-  graph.nodes.push({ "name": "4"})
-  graph.nodes.push({ "name": "3"})
-  graph.nodes.push({ "name": "2"})
-  graph.nodes.push({ "name": "1"})
-  var temp_club = []
-  var i = 0;
-  data.forEach(function (d){
-    if (i <= 20)
-    {
-      i++
-      if (!temp_club.includes(d.club_20)){
+  // graph.nodes.push({ "name": "5"});
+  // graph.nodes.push({ "name": "4"});
+  // graph.nodes.push({ "name": "3"});
+  // graph.nodes.push({ "name": "2"});
+  // graph.nodes.push({ "name": "1"});
+  // graph.nodes.push({ "name": "Attacker"});
+  // graph.nodes.push({ "name": "Center"});
+  // graph.nodes.push({ "name": "Defender"});
+  // graph.nodes.push({ "name": "Goalkeeper"});
+  // graph.nodes.push({ "name": "Substitute"});
+
+
+  foo = data_c.filter(function (d) { if (d["Country"] === country) {return d;}});
+
+  var fish = foo.map(d => d.Club);
+
+  var temp = data.filter(function (d) {if (fish.includes(d["club_20"])) {return d;}})
+
+
+  var temp_club = [];
+  var temp_pos = [];
+  var temp_srat = [];
+  temp.forEach(function (d){
+    if (!temp_club.includes(d.club_20)){
       graph.nodes.push({name: d.club_20});
       temp_club.push(d.club_20);
     }
-    // var element = { "name": d.team_position_20 }
-    // graph.nodes.pushIfNotExist(element, function(e) {
-    // return e.name === element.name;
-    // });
-    //club, star, position, skill
-    graph.links.push({ "source": d.club_20,
-                       "target": d.Star_rating_20,
-                       "value": +d.value_eur_20});
-}
+    let pos = attack_position.includes(d.team_position_20) ? "Attacker" :
+                center_position.includes(d.team_position_20) ? "Center" :
+                defend_position.includes(d.team_position_20) ? "Defender" :
+                d.team_position_20 === "GK" ? "Goalkeeper" : "Substitute"
+    if (!temp_pos.includes(pos)){
+      graph.nodes.push({name: pos});
+      temp_pos.push(pos);
+    }
+    if (!temp_srat.includes(d.Star_rating_20)){
+      graph.nodes.push({name: d.Star_rating_20});
+      temp_srat.push(d.Star_rating_20);
+    }
+    flag = true;
+    if (graph.links.length > 0) {
+      for (x = 0;  x < graph.links.length; x++){
+        if (graph.links[x].source === d.club_20 && graph.links[x].target === d.Star_rating_20){
+          graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+          flag = false;
+          break;
+        }
+      }
+    }
+    if (flag) {
+      graph.links.push({
+        "source": d.club_20,
+        "target": d.Star_rating_20,
+        "value": +d.value_eur_20
+          });
+      };
+
+      flag2 = true;
+      for (x = 0;  x < graph.links.length; x++){
+        if(attack_position.includes(d.team_position_20)){
+            if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Attacker"){
+                graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+                flag2=false;
+                break;
+              }
+        } else  if(center_position.includes(d.team_position_20)) {
+          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Center"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+              flag2=false;
+              break;
+            }
+        } else if(defend_position.includes(d.team_position_20)) {
+          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Defender"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+              flag2=false;
+              break;
+            }
+        } else if("GK" === d.team_position_20) {
+          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Goalkeeper"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+              flag2=false;
+              break;
+            }
+        } else {
+          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Substitute"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+              flag2=false;
+              break;
+            }
+      };}
+      if (flag2)  {
+      if(attack_position.includes(d.team_position_20)){
+      graph.links.push({
+        "source": d.Star_rating_20,
+        "target": "Attacker",
+        "value": +d.value_eur_20
+      })
+    } else
+    if(center_position.includes(d.team_position_20)){
+      graph.links.push({
+        "source": d.Star_rating_20,
+        "target": "Center",
+        "value": +d.value_eur_20
+      })
+    } else
+    if(defend_position.includes(d.team_position_20)){
+      graph.links.push({
+        "source": d.Star_rating_20,
+        "target": "Defender",
+        "value": +d.value_eur_20
+      })
+    } else
+    if("GK" === d.team_position_20){
+      graph.links.push({
+        "source": d.Star_rating_20,
+        "target": "Goalkeeper",
+        "value": +d.value_eur_20
+      })
+    } else {
+      graph.links.push({
+        "source": d.Star_rating_20,
+        "target": "Substitute",
+        "value": +d.value_eur_20
+    })
+
+    };}
+
    });
   return graph;
 }
