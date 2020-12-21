@@ -14,7 +14,12 @@ var x_line, y_line;
 
 var line_color,countryColor, sankeyColor;
 
-var year = [15,16,17,18,19,20];
+var years = [15,16,17,18,19,20];
+var current_year = 20;
+var current_type = "c";
+var current_value= "Portugal";
+var current_attribute= "nationality";
+var current_check = "wage_eur_";
 
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
@@ -42,8 +47,14 @@ $(document).ready(function(){
 
 function create_button_row() {
   var country = data.map(d => d.nationality)
-  var team = data.map (d => d.club_20)
+  team20 = data.map (d => d.club_20)
+  team19= data.map (d => d.club_19)
+  team18= data.map (d => d.club_18)
+  team17= data.map (d => d.club_17)
+  team16= data.map (d => d.club_16)
+  team15= data.map (d => d.club_15)
 
+  var team = team20.concat(team19).concat(team18).concat(team17).concat(team16).concat(team15);
   team = team.filter((v, i, a) => a.indexOf(v) === i);
   country = country.filter((v, i, a) => a.indexOf(v) === i);
 
@@ -95,13 +106,52 @@ function create_button_row() {
   .attr("data-tokens", d => d)
   .text(d => d);
 
+  var dataTime = d3.range(0, 6).map(function(d) {
+   return new Date(2015 + d, 10, 3);
+ });
+
+ var sliderTime = d3
+   .sliderBottom()
+   .min(d3.min(dataTime))
+   .max(d3.max(dataTime))
+   .step(1000 * 60 * 60 * 24 * 365)
+   .width(width)
+   .tickFormat(d3.timeFormat('%Y'))
+   .tickValues(dataTime)
+   .default(new Date(2020, 10, 3))
+   .on('onchange', val => {
+      value = d3.timeFormat("%Y")(val)
+      current_year = value.slice(-2)
+      prepare_button(current_attribute, current_value, current_type, current_year,true)
+   });
+
+ var gTime = d3
+   .select('div#slider-time')
+   .append('svg')
+   .attr('width', width + 50)
+   .attr('height', 100)
+   .append('g')
+   .attr('transform', 'translate(15,30)');
+
+ gTime.call(sliderTime);
+
+  $('#formControlRange').on('change', function(e){
+    current_year = this.value;
+    prepare_button(current_attribute, current_value, current_type, this.value)
+  });
 
   $('#p').on('change', function(e){
-    prepare_button('long_name',this.value, "p")
+    current_attribute = "long_name";
+    current_type = "p";
+    current_value = this.value;
+    prepare_button('long_name',this.value, "p", current_year)
   });
 
   $('#t').on('change', function(e){
-    prepare_button('club_20',this.value, "t");
+    current_attribute = "club_" + current_year ;
+    current_type = "t";
+    current_value = this.value;
+    prepare_button(current_attribute,this.value, "t", current_year);
   });
 
 
@@ -111,15 +161,25 @@ function create_button_row() {
         selectedCountry.style("stroke-width", "0.3px");
       };
 
-      temp = this.value
+      current_value = this.value
       selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
-        return d.properties.name == temp;
+        return d.properties.name == current_value;
       });
-      selectedCountry.style("stroke", "white");
+      selectedCountry.style("stroke", "black");
       selectedCountry.style("stroke-width", "2px");
 
-    prepare_button('nationality',this.value, "c");
+      current_attribute = "nationality" ;
+      current_type = "c";
+      current_value = this.value;
+
+    prepare_button('nationality',this.value, "c", current_year);
   });
+
+  $("input[name='exampleRadios").click(function(){
+            var radioValue = $("input[name='exampleRadios']:checked").val();
+            current_check = radioValue;
+            update_choropleth(radioValue);
+        });
 
   $('.selectpicker').selectpicker('render');
 
@@ -144,7 +204,7 @@ function create_chloropletMap() {
     .enter()
     .append("path")
     .attr("d",path)
-    .style("stroke", "black")
+    .style("stroke", "white")
     .style("stroke-width", "0.3px")
     .style("fill", d => getValue(d.properties.name,"wage_eur_20"))
     .attr("id", function(datum, index) {
@@ -161,7 +221,6 @@ function create_chloropletMap() {
     );
   }
   function zoomed({ transform}){
-    //console.log(transform);
     d3.select("#choropleth").selectAll("path").attr("transform",transform);
   }
 
@@ -173,7 +232,7 @@ function create_chloropletMap() {
 function getValue(country, attribute) {
   nat = create_data("nationality", country);
 
-  wage  = nat.map(d => d.wage_eur_20);
+  wage  = nat.map(d => d[attribute]);
   var myColor = d3.scaleSequential()
   .domain([d3.min(wage),d3.max(wage)])
   .interpolator(d3.interpolatePuRd);
@@ -282,7 +341,6 @@ function create_lineChart () {
     .attr("r", 5)
     .attr("fill", line_color(dat.type))
     .attr("cx",(d, i) => x(new Date("20" + line_data.dates[i], 0,1,0)))
-    //.attr("d", d=> console.log(d))
     .attr("cy",d => y(d));
   });
 
@@ -537,6 +595,8 @@ var q3 = d3.quantile(data_sorted, .75);
 var interQuantileRange = q3 - q1;
 var min = q1 - 1.5 * interQuantileRange;
 var max = q1 + 1.5 * interQuantileRange;
+min = d3.min(data_sorted);
+max = d3.max(data_sorted);
 
 var center = x.bandwidth()*index - x.bandwidth()/2;
 var width = x.bandwidth()/8;
@@ -576,7 +636,7 @@ g_b.selectAll("toto")
 
 }
 
-function prepare_button(selector,attribute, type) {
+function prepare_button(selector,attribute, type, year,flag) {
   var temp = attribute;
   var dataset = create_data(selector,attribute);
   var t_data = dataset;
@@ -600,7 +660,7 @@ function prepare_button(selector,attribute, type) {
   .nice();
 
 
-  draw = d3.line()
+if (!flag) {  draw = d3.line()
   .defined(d => !isNaN(d))
   .x((d, i) => x_line(new Date("20" + ndataset.dates[i], 0,1,0)))
   .y(d => y_line(d))
@@ -622,7 +682,6 @@ function prepare_button(selector,attribute, type) {
   .attr("d",d => draw(d.values));
 
   svg_line_chart.select("#line_g").selectAll("path").each(function(dat) {
-    //for (i=2015; i<=2020; i++)
     svg_line_chart.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
     .data(dat.values)
     .join("circle")
@@ -630,18 +689,18 @@ function prepare_button(selector,attribute, type) {
     .attr("r", 5)
     .attr("fill", line_color(dat.type))
     .attr("cx",(d, i) => x_line(new Date("20" + line_data.dates[i], 0,1,0)))
-    //.attr("d", d=> console.log(d))
     .attr("cy",d => y_line(d));
   });
 
   g_l.attr("transform","translate(-" + width + " 0)");
 
   g_l.transition().duration(5000).attr("transform","translate(0, 0)");
+}
 
-  gk_data = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}});
-  def_data = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}});
-  cen_data = dataset.filter(function(d){if (center_position.includes(d.team_position_20)) {return d;}});
-  att_data = dataset.filter(function(d){if (attack_position.includes(d.team_position_20)) {return d;}});
+  gk_data = dataset.filter(function(d){if (d["team_position_" + year] == "GK") {return d;}});
+  def_data = dataset.filter(function(d){if (defend_position.includes(d["team_position_" + year])) {return d;}});
+  cen_data = dataset.filter(function(d){if (center_position.includes(d["team_position_" + year])) {return d;}});
+  att_data = dataset.filter(function(d){if (attack_position.includes(d["team_position_" + year])) {return d;}});
 
   var y = d3.scaleLinear()
   .domain(d3.extent(data.map(d => d.height_cm)))
@@ -664,10 +723,10 @@ function prepare_button(selector,attribute, type) {
   //Creates the points
   switch (type) {
     case "p":
-    var index = t_data[0].team_position_20 == "GK" ? 1 :
-    defend_position.includes(t_data[0].team_position_20) ? 3 :
-    center_position.includes(t_data[0].team_position_20) ? 5 :
-    attack_position.includes(t_data[0].team_position_20) ? 7: null;
+    var index = t_data[0]["team_position_"+ year] == "GK" ? 1 :
+    defend_position.includes(t_data[0]["team_position_"+ year]) ? 3 :
+    center_position.includes(t_data[0]["team_position_"+ year]) ? 5 :
+    attack_position.includes(t_data[0]["team_position_"+ year]) ? 7: null;
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", (x.bandwidth()/2)*index)
@@ -682,10 +741,10 @@ function prepare_button(selector,attribute, type) {
     .text(temp);
     break;
     case "t":
-    gk = dataset.filter(function(d){if (d.team_position_20 == "GK") {return d;}});
-    def = dataset.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}});
-    cen = dataset.filter(function(d){if (center_position.includes(d.team_position_20)) {return d;}});
-    att = dataset.filter(function(d){if (attack_position.includes(d.team_position_20)) {return d;}});
+    gk = dataset.filter(function(d){if (d["team_position_"+ year] == "GK") {return d;}});
+    def = dataset.filter(function(d){if (defend_position.includes(d["team_position_"+ year])) {return d;}});
+    cen = dataset.filter(function(d){if (center_position.includes(d["team_position_"+ year])) {return d;}});
+    att = dataset.filter(function(d){if (attack_position.includes(d["team_position_"+ year])) {return d;}});
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", x.bandwidth()*0.5)
@@ -750,9 +809,10 @@ function prepare_button(selector,attribute, type) {
   if (gk_data.length != 0) {update_area_Chart(y,x,1,gk_data,g_b,g_a);};
 
   if (type == "p"){
-    attribute = data_c.filter(function (d)  {if (d.Club == dataset[0].club_20) {return d;}})[0].Country
+    attribute = data_c.filter(function (d)  {if (d.Club == dataset[0]["club_" + year]) {return d;}})[0].Country
   }
   update_sankey_diagram(attribute);
+  update_choropleth(current_check);
   prepare_event();
 }
 
@@ -761,18 +821,18 @@ function update_sankey_diagram(country){
   svg_sankey.selectAll("g").remove();
   var s_data = create_sankey_data(country)
 
-  if (s_data.nodes.length == 0) {
+  if (s_data.nodes.length == 0 || current_year == 15) {
 
     svg_sankey.append("g")
       .attr("font-family", "sans-serif")
       .attr("font-size", 10)
       .append("text")
-      .attr("x", width / 2)
+      .attr("x", width / 2 -50)
       .attr("y", height / 2)
       .attr("dy", "0.35em")
       .style("color", "red")
       //.attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-      .text(`No data for ${country} available`);
+      .text(`No data for ${country} in the year 20${current_year} available`);
 
   } else {
   const sankey = d3
@@ -865,7 +925,7 @@ function prepare_event() {
 
 dispatch_s.on("choroplethSelect", function (country) {
   if (selectedCountry != null){
-    selectedCountry.style("stroke", "black");
+    selectedCountry.style("stroke", "white");
     selectedCountry.style("stroke-width", "0.3px");
   };
 
@@ -874,16 +934,18 @@ dispatch_s.on("choroplethSelect", function (country) {
   });
 
   temp = country.properties.name;
-  selectedCountry.style("stroke", "white");
+  selectedCountry.style("stroke", "black");
   selectedCountry.style("stroke-width", "2px");
-
-  prepare_button('nationality',country.properties.name, "c");
+  current_type = "c";
+  current_value = country.properties.name;
+  current_attribute = "nationality";
+  prepare_button('nationality',country.properties.name, "c", current_year);
 
 });
 
 dispatch_w.on("choroplethEvent", function (country){
   if (selectedPath != null && selectedPath.datum().properties.name != temp) {
-    selectedPath.style("stroke", "black");
+    selectedPath.style("stroke", "white");
     selectedPath.style("stroke-width", "0.3px");
   };
 
@@ -891,7 +953,7 @@ dispatch_w.on("choroplethEvent", function (country){
     return d == country
   });
   if (selectedPath.datum().properties.name != temp){
-  selectedPath.style("stroke", "white");
+  selectedPath.style("stroke", "black");
     selectedPath.style("stroke-width", "1px");
     }
 });
@@ -930,8 +992,6 @@ dispatch.on("lineEvent", function (category) {
   };
 
   selectedViolin = svg_violin_chart.selectAll("#area").filter(function (d) {
-    // console.log(d);
-    // console.log(category);
     return (d[0].type.includes(category.type)) || category == d;
   });
 
@@ -975,8 +1035,6 @@ function update_area_Chart(y,x,index,data,node_b, node_a) {
   .datum(bins)
   .attr("fill", "grey")
   .attr("id","area")
-  //.attr("stroke", "#69b3a2")
-  //.attr("stroke-width", 1.5)
   .attr("d", d3.area()
   .x0(d => xNum(d.length))
   .x1(d => xNum(-d.length))
@@ -992,6 +1050,8 @@ var q3 = d3.quantile(data_sorted, .75);
 var interQuantileRange = q3 - q1;
 var min = q1 - 1.5 * interQuantileRange;
 var max = q1 + 1.5 * interQuantileRange;
+min = d3.min(data_sorted);
+max = d3.max(data_sorted);
 
 var center = x.bandwidth()*index - x.bandwidth()/2;
 var width = x.bandwidth()/8;
@@ -1030,98 +1090,92 @@ test.selectAll("toto")
 .attr("stroke", "black");
 }
 
+function update_choropleth(attribute){
+  svg_choropleth.selectAll("path")
+    .style("fill", d => getValue(d.properties.name, attribute + current_year));
+}
+
 function create_lineChart_data (data) {
   return {
     "series": [{
       type: "overall",
-      values: year.map(y => d3.mean(data, d => d["overall_" +y]))
+      values: years.map(y => d3.mean(data, d => d["overall_" +y]))
     },
     {
       type: "Defending_Mean",
-      values: year.map(y => d3.mean(data, d => d["Defending_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Defending_Mean_" +y]))
     },
 
     {
       type: "Attacking_Mean",
-      values: year.map(y => d3.mean(data, d => d["Attacking_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Attacking_Mean_" +y]))
     },
 
     {
       type: "Gk_Mean",
-      values: year.map(y => d3.mean(data, d => d["Gk_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Gk_Mean_" +y]))
     },
 
     {
       type: "Mentality_Mean",
-      values: year.map(y => d3.mean(data, d => d["Mentality_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Mentality_Mean_" +y]))
     },
 
     {
       type: "Movement_Mean",
-      values: year.map(y => d3.mean(data, d => d["Movement_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Movement_Mean_" +y]))
     },
 
     {
       type: "Skill_Mean",
-      values: year.map(y => d3.mean(data, d => d["Skill_Mean_" +y]))
+      values: years.map(y => d3.mean(data, d => d["Skill_Mean_" +y]))
     },
 
     {
       type: "potential",
-      values: year.map(y => d3.mean(data, d => d["potential_" +y]))
+      values: years.map(y => d3.mean(data, d => d["potential_" +y]))
     },
 
   ],
-  dates: year
+  dates: years
 };
 }
 
 function create_sankey_data(country) {
   graph = {"nodes" : [], "links" : []};
-  // graph.nodes.push({ "name": "5"});
-  // graph.nodes.push({ "name": "4"});
-  // graph.nodes.push({ "name": "3"});
-  // graph.nodes.push({ "name": "2"});
-  // graph.nodes.push({ "name": "1"});
-  // graph.nodes.push({ "name": "Attacker"});
-  // graph.nodes.push({ "name": "Center"});
-  // graph.nodes.push({ "name": "Defender"});
-  // graph.nodes.push({ "name": "Goalkeeper"});
-  // graph.nodes.push({ "name": "Substitute"});
-
 
   foo = data_c.filter(function (d) { if (d["Country"] === country) {return d;}});
 
   var fish = foo.map(d => d.Club);
 
-  var temp = data.filter(function (d) {if (fish.includes(d["club_20"])) {return d;}})
+  var temp = data.filter(function (d) {if (fish.includes(d["club_" + current_year])) {return d;}})
 
 
   var temp_club = [];
   var temp_pos = [];
   var temp_srat = [];
   temp.forEach(function (d){
-    if (!temp_club.includes(d.club_20)){
-      graph.nodes.push({name: d.club_20});
-      temp_club.push(d.club_20);
+    if (!temp_club.includes(d["club_" + current_year])){
+      graph.nodes.push({name: d["club_" + current_year]});
+      temp_club.push(d["club_" + current_year]);
     }
-    let pos = attack_position.includes(d.team_position_20) ? "Attacker" :
-                center_position.includes(d.team_position_20) ? "Center" :
-                defend_position.includes(d.team_position_20) ? "Defender" :
-                d.team_position_20 === "GK" ? "Goalkeeper" : "Substitute"
+    let pos = attack_position.includes(d["team_position_" + current_year]) ? "Attacker" :
+                center_position.includes(d["team_position_" + current_year]) ? "Center" :
+                defend_position.includes(d["team_position_" + current_year]) ? "Defender" :
+                d["team_position_" + current_year] === "GK" ? "Goalkeeper" : "Substitute"
     if (!temp_pos.includes(pos)){
       graph.nodes.push({name: pos});
       temp_pos.push(pos);
     }
-    if (!temp_srat.includes(d.Star_rating_20)){
-      graph.nodes.push({name: d.Star_rating_20});
-      temp_srat.push(d.Star_rating_20);
+    if (!temp_srat.includes(d["Star_rating_" + current_year])){
+      graph.nodes.push({name: d["Star_rating_" + current_year]});
+      temp_srat.push(d["Star_rating_" + current_year]);
     }
     flag = true;
     if (graph.links.length > 0) {
       for (x = 0;  x < graph.links.length; x++){
-        if (graph.links[x].source === d.club_20 && graph.links[x].target === d.Star_rating_20){
-          graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+        if (graph.links[x].source === d["club_" + current_year] && graph.links[x].target === d["Star_rating_" + current_year]){
+          graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
           flag = false;
           break;
         }
@@ -1129,78 +1183,78 @@ function create_sankey_data(country) {
     }
     if (flag) {
       graph.links.push({
-        "source": d.club_20,
-        "target": d.Star_rating_20,
-        "value": +d.value_eur_20
+        "source": d["club_" + current_year],
+        "target": d["Star_rating_" + current_year],
+        "value": +d["value_eur_" + current_year]
           });
       };
 
       flag2 = true;
       for (x = 0;  x < graph.links.length; x++){
-        if(attack_position.includes(d.team_position_20)){
-            if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Attacker"){
-                graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+        if(attack_position.includes(d["team_position_" + current_year])){
+            if (graph.links[x].source === d["Star_rating_" + current_year] && graph.links[x].target === "Attacker"){
+                graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
                 flag2=false;
                 break;
               }
-        } else  if(center_position.includes(d.team_position_20)) {
-          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Center"){
-              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+        } else  if(center_position.includes(d["team_position_" + current_year])) {
+          if (graph.links[x].source === d["Star_rating_" + current_year] && graph.links[x].target === "Center"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
               flag2=false;
               break;
             }
-        } else if(defend_position.includes(d.team_position_20)) {
-          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Defender"){
-              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+        } else if(defend_position.includes(d["team_position_" + current_year])) {
+          if (graph.links[x].source === d["Star_rating_" + current_year] && graph.links[x].target === "Defender"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
               flag2=false;
               break;
             }
-        } else if("GK" === d.team_position_20) {
-          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Goalkeeper"){
-              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+        } else if("GK" === d["team_position_" + current_year]) {
+          if (graph.links[x].source === d["Star_rating_" + current_year] && graph.links[x].target === "Goalkeeper"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
               flag2=false;
               break;
             }
         } else {
-          if (graph.links[x].source === d.Star_rating_20 && graph.links[x].target === "Substitute"){
-              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d.value_eur_20);
+          if (graph.links[x].source === d["Star_rating_" + current_year] && graph.links[x].target === "Substitute"){
+              graph.links[x].value = parseInt(graph.links[x].value) + parseInt(d["value_eur_" + current_year]);
               flag2=false;
               break;
             }
       };}
       if (flag2)  {
-      if(attack_position.includes(d.team_position_20)){
+      if(attack_position.includes(d["team_position_" + current_year])){
       graph.links.push({
-        "source": d.Star_rating_20,
+        "source": d["Star_rating_" + current_year],
         "target": "Attacker",
-        "value": +d.value_eur_20
+        "value": +d["value_eur_" + current_year]
       })
     } else
-    if(center_position.includes(d.team_position_20)){
+    if(center_position.includes(d["team_position_" + current_year])){
       graph.links.push({
-        "source": d.Star_rating_20,
+        "source": d["Star_rating_" + current_year],
         "target": "Center",
-        "value": +d.value_eur_20
+        "value": +d["value_eur_" + current_year]
       })
     } else
-    if(defend_position.includes(d.team_position_20)){
+    if(defend_position.includes(d["team_position_" + current_year])){
       graph.links.push({
-        "source": d.Star_rating_20,
+        "source": d["Star_rating_" + current_year],
         "target": "Defender",
-        "value": +d.value_eur_20
+        "value": +d["value_eur_" + current_year]
       })
     } else
-    if("GK" === d.team_position_20){
+    if("GK" === d["team_position_" + current_year]){
       graph.links.push({
-        "source": d.Star_rating_20,
+        "source": d["Star_rating_" + current_year],
         "target": "Goalkeeper",
-        "value": +d.value_eur_20
+        "value": +d["value_eur_" + current_year]
       })
     } else {
       graph.links.push({
-        "source": d.Star_rating_20,
+        "source": d["Star_rating_" + current_year],
         "target": "Substitute",
-        "value": +d.value_eur_20
+        "value": +d["value_eur_" + current_year]
     })
 
     };}

@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <title> FIFA Data-Set </title>
@@ -13,63 +13,111 @@
   <script src="./res/d3_6.1.1/d3.js"></script>
   <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.js"></script>
   <script src="https://unpkg.com/d3-sankey@0"></script>
+  <script src="https://unpkg.com/d3-simple-slider"></script>
   <script src="./js/main.js"></script>
 
 
 </head>
 <body>
-
-<div class="row">
-  <div class="col">
-    <div class="container">
-      <div class="col" id="player">
+  <div class="row">
+    <div class="col-3">
+      <div class="container">
+        <div class="col" id="player">
+        </div>
+        <div class="col" id="team">
+        </div>
+        <div class="col" id="country">
+        </div>
       </div>
-      <div class="col" id="team">
-      </div>
-      <div class="col" id="country">
-      </div>
-  </div>
-</div>
-<div class="col">
-      <label for="custom-range" style="text-align: center">Select a Year</label>
-      <input type="range" list="tickmarks">
-
-<datalist id="tickmarks">
-  <option value="0" label="0%"></option>
-  <option value="10"></option>
-  <option value="20"></option>
-  <option value="30"></option>
-  <option value="40"></option>
-  <option value="50" label="50%"></option>
-  <option value="60"></option>
-  <option value="70"></option>
-  <option value="80"></option>
-  <option value="90"></option>
-  <option value="100" label="100%"></option>
-</datalist>
     </div>
-<div class="col">
-  <div class="form-check">
-  <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
-  <label class="form-check-label" for="defaultCheck1">
-    Default checkbox
-  </label>
-</div>
-<div class="form-check">
-  <input class="form-check-input" type="checkbox" value="" id="defaultCheck2" disabled>
-  <label class="form-check-label" for="defaultCheck2">
-    Disabled checkbox
-  </label>
-</div>
-</div>
-</div>
-<div class ="row">
-  <div id="choropleth" class="col-12">  </div>
+    <div class="col-3">
+      <div class="row align-items-center">
+        <div class="col-sm-2"><p id="value-time"></p></div>
+        <div class="col-sm"><div id="slider-time"></div></div>
+      </div>
+    </div>
+    <div class="col-1">
+      <div style=" margin-left: 30px;margin-top: 20px;">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="wage_eur_" checked>
+          <label class="form-check-label" for="exampleRadios1">
+            Wage
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios3" value="overall_">
+          <label class="form-check-label" for="exampleRadios3">
+            Overall
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios5" value="Attacking_Mean_">
+          <label class="form-check-label" for="exampleRadios5">
+            Attacking
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios6" value="Skill_Mean_">
+          <label class="form-check-label" for="exampleRadios6">
+            Skill
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios9" value="Mentality_Mean_">
+          <label class="form-check-label" for="exampleRadios9">
+            Mentality
+          </label>
+        </div>
+      </div>
+    </div>
+      <div class="col-1">
+        <div style="margin-top: 20px;">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="value_eur_">
+          <label class="form-check-label" for="exampleRadios2">
+            Value
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios4" value="potential_">
+          <label class="form-check-label" for="exampleRadios4">
+            Potential
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios7" value="Movement_Mean_">
+          <label class="form-check-label" for="exampleRadios7">
+            Movement
+          </label>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios8" value="Defending_Mean_">
+          <label class="form-check-label" for="exampleRadios8">
+            Defending
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios10" value="Gk_Mean_">
+          <label class="form-check-label" for="exampleRadios10">
+            Goalkeeper
+          </label>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
-<div class ="row">
-      <div id="line" > </div>
-      <div id="violin" > </div>
-      <div id="sankey" > </div>
+  <div class ="row">
+    <div style="margin-left: 15px">
+    <div id="choropleth" class="col">  </div>
   </div>
+</div>
+  <div style="margin-left: 15px">
+  <div class ="row">
+    <div id="line" > </div>
+    <div id="violin" > </div>
+    <div id="sankey" > </div>
+  </div>
+</div>
 </body>
 </html>
