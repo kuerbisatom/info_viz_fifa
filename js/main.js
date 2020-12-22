@@ -227,13 +227,14 @@ function create_chloropletMap() {
 
   var svg = d3.select('#choropleth')
   .append('svg')
+  .attr('id', 'c_svg')
   .attr("width", 3.7*(width) + margin.left + margin.right)
   .attr("height", (height) + margin.left + margin.right)
 
   var projection = d3.geoMercator()
-  .center([-100, 0])
-    .scale(400)
-    .rotate([123,0]);
+    .center([-150, 0])
+    .scale(100)
+    //.rotate([123,0]);
 
   var path = d3.geoPath()
     .projection(projection);
@@ -288,14 +289,35 @@ function create_chloropletMap() {
     d3.select("#choropleth").select("svg").call(
       d3
         .zoom()
-        .scaleExtent([-10,10])
+        //.translateExtent([[0,0],[width,height]])
+        .scaleExtent([0,20])
         .on("zoom", zoomed)
         //.center(zoomed);
     );
   }
   function zoomed({ transform}){
-    d3.select("#choropleth").selectAll("path").attr("transform",transform);
-  }
+    //console.log(transform)
+    // console.log($('#svg_c').width())
+    // console.log($("#c_svg").width())
+     var width = $("#c_svg").width()/2
+     var height = $("#c_svg").height()
+
+    //
+     tx = Math.min(0, Math.max(transform.x, width - width * transform.k));
+    ty = Math.min(0, Math.max(transform.y, height - height * transform.k));
+    //
+    //      svg.attr("transform", [
+    //        "translate(" + [tx, ty] + ")",
+    //        "scale(" + e.k + ")"
+    //      ].join(" "));
+
+    d3.select("#choropleth").selectAll("path").attr("transform", [
+           "translate(" + [tx, ty] + ")",
+           "scale(" + transform.k + ")"
+         ].join(" "));
+  };
+
+    //d3.select("#choropleth").selectAll("path").attr("transform",transform);
 
 
   svg_choropleth = svg;
