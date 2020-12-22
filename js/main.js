@@ -152,6 +152,19 @@ function create_button_row() {
     current_attribute = "long_name";
     current_type = "p";
     current_value = this.value;
+    temp = data.filter(function (d) {if (d["long_name"] == current_value) {return d;} });
+    if (selectedCountry != null){
+      selectedCountry.style("stroke", "black");
+      selectedCountry.style("stroke-width", "0.3px");
+    };
+    selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
+      return d.properties.name == temp[0]["nationality"];
+    });
+    selectedCountry.style("stroke", "black");
+    selectedCountry.style("stroke-width", "2px");
+    $('select[id=c]').val(temp[0]["nationality"]);
+    $('select[id=t]').val(temp[0]["club_"+ current_year]);
+    $('.selectpicker').selectpicker('refresh')
     prepare_button('long_name',this.value, "p", current_year)
   });
 
@@ -159,6 +172,23 @@ function create_button_row() {
     current_attribute = "club_" + current_year ;
     current_type = "t";
     current_value = this.value;
+    temp = data_c.filter(function (d) {
+      if(d["Club"] === current_value)
+      {return d;}
+    });
+    console.log(temp);
+    if (selectedCountry != null){
+      selectedCountry.style("stroke", "black");
+      selectedCountry.style("stroke-width", "0.3px");
+    };
+    selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
+      return d.properties.name == temp[0].Country
+    });
+    selectedCountry.style("stroke", "black");
+    selectedCountry.style("stroke-width", "2px");
+    $('select[id=c]').val(temp[0].Country);
+    $('.selectpicker').selectpicker('refresh')
+
     prepare_button(current_attribute,this.value, "t", current_year);
   });
 
@@ -498,7 +528,7 @@ function create_lineChart () {
   .append("text")
   .attr(
     "transform",
-    "translate(" + width / 2 + " ," + (height + margin.bottom) + ")"
+    "translate(" + width / 2 + " ," + (height + margin.bottom + 20) + ")"
   )
   .attr("class", "label")
   .attr("style","font-size:12px")
@@ -908,6 +938,7 @@ if (!flag) {  draw = d3.line()
   .attr("stroke-linejoin", "round")
   .attr("d",d => draw(d.values));
 
+
   svg_line_chart.select("#line_g").selectAll("path").each(function(dat) {
     svg_line_chart.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
     .data(dat.values)
@@ -919,9 +950,10 @@ if (!flag) {  draw = d3.line()
     .attr("cy",d => y_line(d));
   });
 
-  g_l.attr("transform","translate(-" + width + " 0)");
+  g_l.attr("style","opacity: 0;");
 
-  g_l.transition().duration(5000).attr("transform","translate(0, 0)");
+  g_l.transition().duration(3000).attr("style","opacity: 1;");
+
 }
 
   gk_data = dataset.filter(function(d){if (d["team_position_" + year] == "GK") {return d;}});
@@ -1377,7 +1409,7 @@ dispatch_sa.on("sankeyEvent", function (data) {
   if (selectedLink != null){
       selectedLink.attr("stroke-opacity",0.5);
   }
-  console.log(data);
+
 
   index_list = []
 
@@ -1392,8 +1424,6 @@ dispatch_sa.on("sankeyEvent", function (data) {
       index_list.push(data.target.sourceLinks[x].index);
     }
   }
-  console.log(index_list);
-  console.log(data["index"]);
   selectedLink = svg_sankey.selectAll("path").filter(function (d) {
     return index_list.includes(d["index"]);
   });
@@ -2188,6 +2218,7 @@ function create_sankey_data(country) {
   var temp_club = [];
   var temp_pos = [];
   var temp_srat = [];
+
 
   temp.forEach(function (d){
     if (!temp_club.includes(d["club_" + current_year]) && !temp_c.includes(d["club_" + current_year])){
