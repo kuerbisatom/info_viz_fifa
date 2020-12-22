@@ -295,29 +295,20 @@ function create_chloropletMap() {
     );
   }
   function zoomed({ transform}){
-    //console.log(transform)
-    // console.log($('#svg_c').width())
-    // console.log($("#c_svg").width())
+
      var width = $("#c_svg").width()/2
      var height = $("#c_svg").height()
 
-    //
+
      tx = Math.min(0, Math.max(transform.x, width - width * transform.k));
     ty = Math.min(0, Math.max(transform.y, height - height * transform.k));
-    //
-    //      svg.attr("transform", [
-    //        "translate(" + [tx, ty] + ")",
-    //        "scale(" + e.k + ")"
-    //      ].join(" "));
+
 
     d3.select("#choropleth").selectAll("path").attr("transform", [
            "translate(" + [tx, ty] + ")",
            "scale(" + transform.k + ")"
          ].join(" "));
   };
-
-    //d3.select("#choropleth").selectAll("path").attr("transform",transform);
-
 
   svg_choropleth = svg;
 
@@ -926,6 +917,7 @@ g_b.selectAll("toto")
 }
 
 function prepare_button(selector,attribute, type, year,flag) {
+
   var temp = attribute;
   var dataset = create_data(selector,attribute);
   var t_data = dataset;
@@ -971,7 +963,6 @@ if (!flag) {  draw = d3.line()
   .attr("stroke-linejoin", "round")
   .attr("d",d => draw(d.values));
 
-  console.log(ndataset.series);
   svg_line_chart.select("#line_g").selectAll("path").each(function(dat) {
     svg_line_chart.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
     .data(dat.values)
@@ -1106,10 +1097,6 @@ if (!flag) {  draw = d3.line()
 
   if (gk_data.length != 0) {update_area_Chart(y,x,1,gk_data,g_b,g_a);};
 
-  // if (type == "t"){
-  //   console.log(attribute);
-  //   attribute = data_c.filter(function (d)  {if (d.Club == dataset[0]["club_" + year]) {return d;}})[0].Country
-  // }
   update_sankey_diagram(attribute);
   prepare_event();
 }
@@ -1247,7 +1234,6 @@ function prepare_event() {
       .style("opacity", 0);
     });
     dispatch_s.on("choroplethSelect", function (country) {
-      console.log(country)
   if (selectedCountry != null){
     selectedCountry.style("stroke", "white");
     selectedCountry.style("stroke-width", "0.3px");
@@ -1346,7 +1332,6 @@ function prepare_event() {
 
 });
   dispatch_m.on("sankeyClick", function (node) {
-  console.log(node);
   if(node.targetLinks.length == 0){
     current_value = node.name;
 
@@ -1356,7 +1341,7 @@ function prepare_event() {
       if(d["Club"] === current_value)
       {return d;}
     });
-    console.log(temp);
+
     if (selectedCountry != null){
       selectedCountry.style("stroke", "black");
       selectedCountry.style("stroke-width", "0.3px");
@@ -2351,8 +2336,6 @@ function create_sankey_data(country) {
     return b.val - a.val
   });
   list = list.slice(15)
-
-  console.log(list);
 
 
   var temp_c = [];
