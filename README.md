@@ -8,7 +8,7 @@ Use a Webserver, e.g with python (Link for Tutorial: https://youtu.be/dQw4w9WgXc
 
 Note !!! This is a non-responsive Design. Use it on 1920 x 1080 Screen in Full-Screen Mode
 
-Code was tested under Chromium Version 87.0.4280.88 (Offizieller Build) Arch Linux (64-Bit)
+Code was tested under Chromium Version 87.0.4280.88 (Official Build) Arch Linux (64-Bit)
 
 
 Have fun ;)
