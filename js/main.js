@@ -371,7 +371,7 @@ function getValue(country,list) {
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
   .attr("x", 80)
-  .attr("y", 545)
+  .attr("y", 460)
   .text(list[0].val);
 
   g
@@ -380,7 +380,7 @@ function getValue(country,list) {
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
   .attr("x", 80)
-  .attr("y", 272)
+  .attr("y", 240)
   .text(Math.trunc(list[0].val/2));
 
 
@@ -405,7 +405,7 @@ function getValue(country,list) {
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
   .attr("x", 3.9 * width - 40)
-  .attr("y", 545)
+  .attr("y", 460)
   .text(list[0].val);
 
   g
@@ -414,7 +414,7 @@ function getValue(country,list) {
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
   .attr("x", 3.9 * width - 40)
-  .attr("y", 272)
+  .attr("y", 240)
   .text(Math.trunc(list[0].val/2));
 
 
