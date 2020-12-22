@@ -1,7 +1,7 @@
 var data, data_w, data_c;
 var margin = {top: 20, right: 50, bottom: 5, left: 100},
-width = 750 - margin.left - margin.right,
-height = 450 - margin.top - margin.bottom;
+width = 600 - margin.left - margin.right,
+height = 425 - margin.top - margin.bottom;
 var dispatch;
 var svg_line_chart, svg_violin_chart, svg_choropleth,svg_sankey;
 var selectedLine, selectedViolin, selectedPath, selectedCountry, selectedLink;
@@ -121,7 +121,7 @@ function create_button_row() {
    .min(d3.min(dataTime))
    .max(d3.max(dataTime))
    .step(1000 * 60 * 60 * 24 * 365)
-   .width(width)
+   .width(width/1.5)
    .tickFormat(d3.timeFormat('%Y'))
    .tickValues(dataTime)
    .default(new Date(2020, 10, 3))
@@ -227,8 +227,8 @@ function create_chloropletMap() {
 
   var svg = d3.select('#choropleth')
   .append('svg')
-  .attr("width", 3.5*(width) + margin.left + margin.right)
-  .attr("height", 1.3*(height) + margin.left + margin.right)
+  .attr("width", 3.7*(width) + margin.left + margin.right)
+  .attr("height", (height) + margin.left + margin.right)
 
   var projection = d3.geoMercator()
   .center([-100, 0])
@@ -361,8 +361,8 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", "80")
-  .attr("y", "20")
+  .attr("x", 80)
+  .attr("y", 20)
   .text(list[list.length -1].val);
 
   g
@@ -370,8 +370,8 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", "80")
-  .attr("y", "700")
+  .attr("x", 80)
+  .attr("y", 545)
   .text(list[0].val);
 
   g
@@ -379,14 +379,14 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", "80")
-  .attr("y", "350")
+  .attr("x", 80)
+  .attr("y", 272)
   .text(Math.trunc(list[0].val/2));
 
 
   g.append("rect")
   .attr("width", 10)
-  .attr("x", 3.7 * width)
+  .attr("x", 3.9 * width )
   .attr("height", height*2)
   .style("fill", "url(#linear-gradient)");
 
@@ -395,8 +395,8 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", 3.7 * width - 40)
-  .attr("y", "20")
+  .attr("x", 3.9 * width - 40)
+  .attr("y", 20)
   .text(list[list.length -1].val);
 
   g
@@ -404,8 +404,8 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", 3.7 * width - 40)
-  .attr("y", "700")
+  .attr("x", 3.9 * width - 40)
+  .attr("y", 545)
   .text(list[0].val);
 
   g
@@ -413,8 +413,8 @@ function getValue(country,list) {
   .attr("font-family", "sans-serif")
   .attr("font-size", 15)
   .attr("text-anchor", "middle")
-  .attr("x", 3.7 * width - 40)
-  .attr("y", "350")
+  .attr("x", 3.9 * width - 40)
+  .attr("y", 272)
   .text(Math.trunc(list[0].val/2));
 
 
@@ -432,7 +432,7 @@ function create_lineChart () {
   // Line Chart
   var svg = d3.select('#line')
   .append('svg')
-  .attr("width", width + margin.left + margin.right)
+  .attr("width", width + margin.left + margin.right )
   .attr("height", height + margin.left + margin.right)
   .append("g")
   .attr("transform",
