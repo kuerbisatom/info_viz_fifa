@@ -1,7 +1,7 @@
 var data, data_w, data_c;
-var margin = {top: 20, right: 50, bottom: 5, left: 100},
+var margin = {top: 20, right: 50, bottom: 5, left: 90},
 width = 600 - margin.left - margin.right,
-height = 425 - margin.top - margin.bottom;
+height = 350 - margin.top - margin.bottom;
 var dispatch;
 var svg_line_chart, svg_violin_chart, svg_choropleth,svg_sankey;
 var selectedLine, selectedViolin, selectedPath, selectedCountry, selectedLink;
