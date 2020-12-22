@@ -1,5 +1,5 @@
 # info_viz_fifa
-Course Information Vizualization
+Course Information Visualization
 
 ## How to use
 You do not need any external ressources, all are included in the res directory
