@@ -902,11 +902,12 @@ function prepare_button(selector,attribute, type, year,flag) {
   if ("t" === type){
     country = data_c.filter(function (d) {if (d.Club == attribute) {return d}})
   }
+
   svg_line_chart.select("#l_display").text(attribute);
   attribute = type == "p" ? dataset[0].nationality : type == "t" ? country[0].Country : attribute;
   svg_violin_chart.select("#v_display").text(attribute);
+  dataset = type == "p" ? create_data("nationality" , dataset[0].nationality) : type == "t" ? create_data("nationality",country[0].Country) : dataset
 
-  dataset = type == "p" ? create_data("nationality" , dataset[0].nationality) : type == "t" ? create_data("nationality",dataset[0].nationality) : dataset
   var y_line = d3.scaleLinear()
   .domain([0,100])
   .range([height,0])
@@ -1163,11 +1164,22 @@ function prepare_event() {
 
   dispatch_l = d3.dispatch("choro");
 
+  dispatch_k = d3.dispatch("lineSelect");
+
+  dispatch_m = d3.dispatch("sankeyClick");
+
+  svg_line_chart.select("#line_g").selectAll("g").on("click", function (event, d) {
+    dispatch_k.call("lineSelect", this, d);
+  });
   svg_sankey.select("g.links").selectAll("path").on("mouseover", function (event, d) {
     dispatch_sa.call("sankeyEvent", this, d);
   });
   svg_sankey.select("g.nodes").selectAll("rect").on("mouseover", function (event, d) {
     dispatch_sa.call("sankeyEvent", this, d);
+  });
+
+  svg_sankey.select("g.nodes").selectAll("rect").on("click", function (event, d) {
+    dispatch_m.call("sankeyClick", this, d);
   });
 
   svg_line_chart.select("#line_g").selectAll("g").on("mouseover", function (event, d) {
@@ -1285,6 +1297,42 @@ dispatch_s.on("choroplethSelect", function (country) {
 
 });
 
+dispatch_k.on("lineSelect", function(line) {
+
+  current_check = line.type + "_";
+
+  document.querySelector("input[value='" + current_check + "']").checked = true;
+  update_choropleth(current_check);
+
+});
+dispatch_m.on("sankeyClick", function (node) {
+  console.log(node);
+  if(node.targetLinks.length == 0){
+    current_value = node.name;
+
+    current_attribute = "club_" + current_year ;
+    current_type = "t";
+    temp = data_c.filter(function (d) {
+      if(d["Club"] === current_value)
+      {return d;}
+    });
+    console.log(temp);
+    if (selectedCountry != null){
+      selectedCountry.style("stroke", "black");
+      selectedCountry.style("stroke-width", "0.3px");
+    };
+    selectedCountry = svg_choropleth.selectAll("path").filter(function (d) {
+      return d.properties.name == temp[0].Country
+    });
+    selectedCountry.style("stroke", "black");
+    selectedCountry.style("stroke-width", "2px");
+    $('select[id=t]').val(current_value);
+    $('select[id=c]').val(temp[0].Country);
+    $('.selectpicker').selectpicker('refresh')
+
+    prepare_button(current_attribute,current_value, "t", current_year);
+  }
+});
 
 dispatch_w.on("choroplethEvent", function (country){
   if (selectedPath != null && selectedPath.datum().properties.name != temp) {
@@ -1409,26 +1457,56 @@ dispatch_sa.on("sankeyEvent", function (data) {
   if (selectedLink != null){
       selectedLink.attr("stroke-opacity",0.5);
   }
-
-
   index_list = []
 
-  index_list.push(data["index"]);
-  if (data.source.sourceLinks.length > 0){
-    for (x = 0; x < data.source.targetLinks.length; x++){
-      index_list.push(data.source.targetLinks[x].index);
+  try{
+    if(data.sourceLinks.length == 0){
+      elements = data.targetLinks;
+      for (x in elements){
+        index_list.push(elements[x]["index"]);
+        if (elements[x].source.sourceLinks.length > 0){
+          for (y = 0; y < elements[x].source.targetLinks.length; y++){
+            index_list.push(elements[x].source.targetLinks[y].index);
+          }
+        }
+      }
+    } else if (data.targetLinks.length == 0){
+      elements = data.sourceLinks;
+      for (x in elements){
+        index_list.push(elements[x]["index"]);
+        if (elements[x].target.sourceLinks.length > 0){
+          for (y = 0; y < elements[x].target.sourceLinks.length; y++){
+            index_list.push(elements[x].target.sourceLinks[y].index);
+          }
+        }
+      }
+    } else {
+        elements = data.sourceLinks;
+        for (x in elements){
+          index_list.push(elements[x]["index"]);
+        }
+        elements = data.targetLinks;
+        for (x in elements){
+          index_list.push(elements[x]["index"]);
+        }
+    }
+  } catch (error) {
+    index_list.push(data["index"]);
+    if (data.source.sourceLinks.length > 0){
+      for (x = 0; x < data.source.targetLinks.length; x++){
+        index_list.push(data.source.targetLinks[x].index);
+      }
+    }
+    if (data.target.sourceLinks.length > 0){
+      for (x = 0; x < data.target.sourceLinks.length; x++){
+        index_list.push(data.target.sourceLinks[x].index);
+      }
     }
   }
-  if (data.target.sourceLinks.length > 0){
-    for (x = 0; x < data.target.sourceLinks.length; x++){
-      index_list.push(data.target.sourceLinks[x].index);
-    }
-  }
+
   selectedLink = svg_sankey.selectAll("path").filter(function (d) {
     return index_list.includes(d["index"]);
   });
-
-  //index == link-index > id
 
   selectedLink.attr("stroke-opacity",1);
 
