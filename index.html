@@ -16,11 +16,27 @@
   <script src="https://unpkg.com/d3-simple-slider"></script>
   <script src="./js/main.js"></script>
 
+<style> /* set the CSS */
+  div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 60px;
+    height: 40px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  </style>
 
 </head>
 <body>
   <div class="row">
-    <div class="col-3">
+    <div class="col-4">
+      <center>
       <div class="container">
         <div class="col" id="player">
         </div>
@@ -29,14 +45,15 @@
         <div class="col" id="country">
         </div>
       </div>
+    </center>
     </div>
-    <div class="col-3">
+    <div class="col-4">
       <div class="row align-items-center">
         <div class="col-sm-2"><p id="value-time"></p></div>
         <div class="col-sm"><div id="slider-time"></div></div>
       </div>
     </div>
-    <div class="col-1">
+    <div class="col-2">
       <div style=" margin-left: 30px;margin-top: 20px;">
         <div class="form-check">
           <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="wage_eur_" checked>
@@ -70,7 +87,7 @@
         </div>
       </div>
     </div>
-      <div class="col-1">
+      <div class="col-2">
         <div style="margin-top: 20px;">
         <div class="form-check">
           <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="value_eur_">
@@ -108,15 +125,22 @@
     </div>
   </div>
   <div class ="row">
-    <div style="margin-left: 15px">
+    <div style="margin-left: 30px">
     <div id="choropleth" class="col">  </div>
   </div>
 </div>
   <div style="margin-left: 15px">
   <div class ="row">
-    <div id="line" > </div>
-    <div id="violin" > </div>
-    <div id="sankey" > </div>
+    <center>
+    <div id="line"> </div>
+  </center>
+  <center>
+<div id="violin"> </div>
+  </center>
+  <center>
+    <div id="sankey"> </div>
+  </center>
+
   </div>
 </div>
 </body>

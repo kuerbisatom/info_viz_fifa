@@ -1,10 +1,10 @@
 var data, data_w, data_c;
-var margin = {top: 20, right: 30, bottom: 30, left: 60},
-width = 460 - margin.left - margin.right,
-height = 400 - margin.top - margin.bottom;
+var margin = {top: 20, right: 50, bottom: 5, left: 100},
+width = 750 - margin.left - margin.right,
+height = 450 - margin.top - margin.bottom;
 var dispatch;
 var svg_line_chart, svg_violin_chart, svg_choropleth,svg_sankey;
-var selectedLine, selectedViolin, selectedPath, selectedCountry;
+var selectedLine, selectedViolin, selectedPath, selectedCountry, selectedLink;
 var temp;
 var attack_position = ["RW", "LW", "ST", "LF", "RF", "CF", "RS", "LS"];
 var center_position = ["LM", "CM", "RM", "CAM", "RCM", "CDM", "LCM", "LDM", "RDM", "LAM", "RAM"];
@@ -13,6 +13,7 @@ var defend_position = ["LCB", "RCB", "LB", "RB", "CB", "LWB", "RWB" ];
 var x_line, y_line;
 
 var line_color,countryColor, sankeyColor;
+var show = false;
 
 var years = [15,16,17,18,19,20];
 var current_year = 20;
@@ -20,11 +21,16 @@ var current_type = "c";
 var current_value= "Portugal";
 var current_attribute= "nationality";
 var current_check = "wage_eur_";
+var div;
 
 $(document).ready(function(){
   d3.csv("./res/FIFA_players_15_20.csv").then(function(dataset){
     d3.json("./../res/countries-50m.json").then(function(world) {
       d3.csv("./../res/country_clubs.csv").then(function(club) {
+       div = d3.select("body").append("div")
+          .attr("class", "tooltip")
+          .style("opacity", 0);
+
     data_c = club
     data_w = world;
     data = dataset;
@@ -123,6 +129,7 @@ function create_button_row() {
       value = d3.timeFormat("%Y")(val)
       current_year = value.slice(-2)
       prepare_button(current_attribute, current_value, current_type, current_year,true)
+      update_choropleth(current_check);
    });
 
  var gTime = d3
@@ -137,7 +144,8 @@ function create_button_row() {
 
   $('#formControlRange').on('change', function(e){
     current_year = this.value;
-    prepare_button(current_attribute, current_value, current_type, this.value)
+    prepare_button(current_attribute, current_value, current_type, this.value);
+    update_choropleth(current_check);
   });
 
   $('#p').on('change', function(e){
@@ -186,38 +194,73 @@ function create_button_row() {
 };
 
 function create_chloropletMap() {
+
   var svg = d3.select('#choropleth')
   .append('svg')
-  .attr("width", 2.5*(width) + margin.left + margin.right)
+  .attr("width", 3.5*(width) + margin.left + margin.right)
   .attr("height", 1.3*(height) + margin.left + margin.right)
-  //.append("g")
-  //.attr("transform",
-  //"translate(" + margin.left + "," + margin.top + ")");
 
-  var projection = d3.geoMercator();
+  var projection = d3.geoMercator()
+  .center([-100, 0])
+    .scale(400)
+    .rotate([123,0]);
 
   var path = d3.geoPath()
     .projection(projection);
+
+    svg_choropleth = svg;
+
+    var temp = data.map(d => d["nationality"]);
+
+
+    function onlyUnique(value, index, self) {
+    return self.indexOf(value) === index;
+    }
+
+    var list = [];
+
+    x_uni = temp.filter(onlyUnique);
+    for (y= 0; y < x_uni.length; y++){
+      value  = data.map(function(d) {if(d["nationality"] == x_uni[y]) {return parseInt(d[current_check + current_year]) }});
+      list.push({
+        key: x_uni[y],
+        val: d3.mean(value),
+      })
+    };
+
+    list = list.sort(function (a, b) {
+      return b.val - a.val
+    });
+
+    var myColor = d3.scaleLinear()
+    .domain([list[list.length-1].val,list[0].val])
+    .range([0.05,1]);
+
+    countryColor = myColor;
 
     svg.selectAll("path")
     .data(topojson.feature(data_w, data_w.objects.countries).features)
     .enter()
     .append("path")
     .attr("d",path)
+    .attr("title", "Top Players and Clubs")
+    .attr("data-toggle","popover")
     .style("stroke", "white")
     .style("stroke-width", "0.3px")
-    .style("fill", d => getValue(d.properties.name,"wage_eur_20"))
+    .style("fill", d => getValue(d.properties.name,list))
     .attr("id", function(datum, index) {
       return datum.properties.name;
-    });
-    //addZoom();
+    })
+
+    addZoom();
 
   function addZoom(){
     d3.select("#choropleth").select("svg").call(
       d3
         .zoom()
-        .scaleExtent([1,10])
+        .scaleExtent([-10,10])
         .on("zoom", zoomed)
+        //.center(zoomed);
     );
   }
   function zoomed({ transform}){
@@ -229,23 +272,130 @@ function create_chloropletMap() {
 
 };
 
-function getValue(country, attribute) {
+function getValue(country,list) {
   nat = create_data("nationality", country);
+  wage  = nat.map(d => parseInt(d[current_check + current_year]));
+  categories = ["overall_" + current_year, "Defending_Mean_" + current_year,
+  "Attacking_Mean_" + current_year, "Gk_Mean_" + current_year, "Mentality_Mean_" + current_year,
+  "Movement_Mean_" + current_year, "Skill_Mean_" + current_year, "potential_" + current_year,
+  "wage_eur_" + current_year, "value_eur_" + current_year];
 
-  wage  = nat.map(d => d[attribute]);
-  var myColor = d3.scaleSequential()
-  .domain([d3.min(wage),d3.max(wage)])
-  .interpolator(d3.interpolatePuRd);
 
-  mean = d3.mean(wage);
+  var color_line = d3.scaleOrdinal()
+  .domain(categories)
+  .range(['#1f78b4','#a6cee3','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6',"#6a3d9a"])
 
-  d3.select("#nationality")
-  .select("g")
-  .datum(mean)
-  .join("g")
+  color = d3.hsl(color_line(current_check + current_year));
 
-  countryColor = myColor;
-  return myColor(mean);
+  mean = Math.trunc(d3.mean(wage))
+
+  //Append a defs (for definition) element to your SVG
+  svg_choropleth.selectAll("defs").remove();
+  svg_choropleth.select("g").remove();
+  var defs = svg_choropleth
+  .append("defs");
+
+  //Append a linearGradient element to the defs and give it a unique id
+  var linearGradient = defs.append("linearGradient")
+    .attr("id", "linear-gradient");
+
+  linearGradient
+  .attr("x1", "0%")
+  .attr("y1", "0%")
+  .attr("x2", "0%")
+  .attr("y2", "100%");
+
+
+  color.s = 0.05
+  //Set the color for the start (0%)
+  linearGradient.append("stop")
+  .attr("offset", "0%")
+  .attr("stop-color", color ); //light blue
+  color.s = 1
+
+  //Set the color for the end (100%)
+  linearGradient.append("stop")
+  .attr("offset", "100%")
+  .attr("stop-color", color); //dark blue
+
+  //Draw the rectangle and fill with gradient
+  g = svg_choropleth.append("g")
+  g.append("rect")
+  .attr("width", 10)
+  .attr("x", 30)
+  .attr("height", height*2)
+  .style("fill", "url(#linear-gradient)");
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", "80")
+  .attr("y", "20")
+  .text(list[list.length -1].val);
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", "80")
+  .attr("y", "700")
+  .text(list[0].val);
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", "80")
+  .attr("y", "350")
+  .text(Math.trunc(list[0].val/2));
+
+
+  g.append("rect")
+  .attr("width", 10)
+  .attr("x", 3.7 * width)
+  .attr("height", height*2)
+  .style("fill", "url(#linear-gradient)");
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", 3.7 * width - 40)
+  .attr("y", "20")
+  .text(list[list.length -1].val);
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", 3.7 * width - 40)
+  .attr("y", "700")
+  .text(list[0].val);
+
+  g
+  .append("text")
+  .attr("font-family", "sans-serif")
+  .attr("font-size", 15)
+  .attr("text-anchor", "middle")
+  .attr("x", 3.7 * width - 40)
+  .attr("y", "350")
+  .text(Math.trunc(list[0].val/2));
+
+
+  // d3.select("#" + country)
+  // .selectAll("g")
+  // .datum(mean)
+  // .join("g")
+
+  color.s = countryColor(mean);
+
+  return color;
 }
 
 function create_lineChart () {
@@ -384,7 +534,6 @@ function create_lineChart () {
 
 function create_violinChart () {
   selected_data = data.filter(function(d){ if (d.nationality == 'Portugal') {return d;}});
-
   gk_data = selected_data.filter(function(d){if (d.team_position_20 == "GK") {return d;}})
   def_data = selected_data.filter(function(d){if (defend_position.includes(d.team_position_20)) {return d;}})
   cen_data = selected_data.filter(function(d){if (center_position.includes(d.team_position_20)) {return d;}})
@@ -549,26 +698,104 @@ let nodes = svg
 };
 
 function create_areaChart(data, index, node, x, y){
-
-  bins =  d3.bin().thresholds(5)(data.map(d=>d.height_cm))
+  bins =  d3.bin().thresholds(20)(data.map(d=>d.height_cm))
   bins.map(function (d) {
     switch(index) {
       case 1:
-      d.type = ["overall",'potential','Gk_Mean'];
+      d.type = ["Goalkeeper"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 2:
-      d.type = ["overall",'potential','Defending_Mean','Mentality_Mean']
+      d.type = ["Defender"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 3:
-      d.type = ["overall",'potential','Movement_Mean']
+      d.type = ["Center"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 4:
-      d.type = ["overall",'potential','Skill_Mean','Attacking_Mean']
+      d.type = ["Attacker"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
     }
   });
   var l_bins_max = d3.max(bins.map(d => d.length))
-
   var xNum = d3.scaleLinear()
   .range([(index-1)*x.bandwidth(), x.bandwidth()*index])
   .domain([-l_bins_max,l_bins_max]);
@@ -812,7 +1039,6 @@ if (!flag) {  draw = d3.line()
     attribute = data_c.filter(function (d)  {if (d.Club == dataset[0]["club_" + year]) {return d;}})[0].Country
   }
   update_sankey_diagram(attribute);
-  update_choropleth(current_check);
   prepare_event();
 }
 
@@ -892,13 +1118,18 @@ let nodes = svg_sankey
 }
 
 function prepare_event() {
+
   dispatch = d3.dispatch("lineEvent");
+
+  dispatch_a = d3.dispatch("areaEvent");
 
   dispatch_w = d3.dispatch("choroplethEvent");
 
   dispatch_s = d3.dispatch("choroplethSelect");
 
   dispatch_sa = d3.dispatch("sankeyEvent");
+
+  dispatch_l = d3.dispatch("choro");
 
   svg_sankey.select("g.links").selectAll("path").on("mouseover", function (event, d) {
     dispatch_sa.call("sankeyEvent", this, d);
@@ -912,17 +1143,26 @@ function prepare_event() {
   });
 
   svg_violin_chart.selectAll("#area").on("mouseover", function (event, d) {
-    dispatch.call("lineEvent", this, d);
+    dispatch_a.call("areaEvent", this, d);
   });
 
   svg_choropleth.selectAll("path").on("mouseover", function (event, d) {
     dispatch_w.call("choroplethEvent", this, d);
   });
 
+  svg_choropleth.selectAll("path").on("mouseout", function (event, d) {
+    dispatch_l.call("choro", this, d);
+  });
+
   svg_choropleth.selectAll("path").on("click", function (event, d) {
     dispatch_s.call("choroplethSelect", this, d);
   });
 
+  dispatch_l.on("choro", function(d) {
+    div.transition()
+      .duration(500)
+      .style("opacity", 0);
+    });
 dispatch_s.on("choroplethSelect", function (country) {
   if (selectedCountry != null){
     selectedCountry.style("stroke", "white");
@@ -933,25 +1173,104 @@ dispatch_s.on("choroplethSelect", function (country) {
     return d == country;
   });
 
+  if (show) {
+    $(`#${temp}`).popover('hide');
+    show = false;
+  } else {
+      show = true;
+    top_p = get_top_player(country.properties.name);
+    top_c = get_top_clubs(country.properties.name);
+
+    content = create_content(top_p, top_c);
+    selectedCountry
+    .attr("data-html","true")
+    .attr("data-content", content)
+      $(`#${country.properties.name}`).popover('show');
+
+
+      $('#p1').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "long_name";
+        current_type = "p";
+        current_value = top_p[0]["key"]
+        prepare_button("long_name",top_p[0]["key"],"p",current_year);
+      });
+      $('#p2').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "long_name";
+        current_type = "p";
+        current_value = top_p[1]["key"]
+        prepare_button("long_name",top_p[1]["key"],"p",current_year);
+      });
+      $('#p3').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "long_name";
+        current_type = "p";
+        current_value = top_p[2]["key"]
+        prepare_button("long_name",top_p[2]["key"],"p",current_year);
+      });
+      $('#c1').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "club_" + current_year ;
+        current_type = "t";
+        current_value = top_c[0]["key"];
+        prepare_button("club_" + current_year ,top_c[0]["key"],"t",current_year);
+      });
+      $('#c2').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "club_" + current_year ;
+        current_type = "t";
+        current_value = top_c[1]["key"];
+        prepare_button("club_" + current_year,top_c[1]["key"],"t",current_year);
+      });
+      $('#c3').click(function(e){
+        show = false
+        $(`#${country.properties.name}`).popover('hide');
+        current_attribute = "club_" + current_year ;
+        current_type = "t";
+        current_value = top_c[2]["key"];
+        prepare_button("club_20" + current_year,top_c[2]["key"],"t",current_year);
+      });
+    };
+
+
+
   temp = country.properties.name;
   selectedCountry.style("stroke", "black");
   selectedCountry.style("stroke-width", "2px");
   current_type = "c";
   current_value = country.properties.name;
   current_attribute = "nationality";
+  $('select[id=c]').val(country.properties.name);
+  $('.selectpicker').selectpicker('refresh')
   prepare_button('nationality',country.properties.name, "c", current_year);
 
+
 });
+
 
 dispatch_w.on("choroplethEvent", function (country){
   if (selectedPath != null && selectedPath.datum().properties.name != temp) {
     selectedPath.style("stroke", "white");
     selectedPath.style("stroke-width", "0.3px");
   };
-
   selectedPath = svg_choropleth.selectAll("path").filter(function (d) {
     return d == country
   });
+  //value  = svg_choropleth.select("#"+country.properties.name).select("g").data()
+   div.transition()
+     .duration(200)
+     .style("opacity", .9);
+   div.html(country.properties.name)
+      .style("left", (event.pageX) + "px")
+      .style("top", (event.pageY - 28) + "px");
+
+
   if (selectedPath.datum().properties.name != temp){
   selectedPath.style("stroke", "black");
     selectedPath.style("stroke-width", "1px");
@@ -959,12 +1278,8 @@ dispatch_w.on("choroplethEvent", function (country){
 });
 
 dispatch.on("lineEvent", function (category) {
-  // Remove highlight
-  //if (selectedLine != null) {
-  //  d3.select("highlight").remove()
-  //}
-
   // Update Line Chart
+
   if (selectedLine != null) {
     selectedLine.attr("stroke-width","1.5");
   }
@@ -974,12 +1289,68 @@ dispatch.on("lineEvent", function (category) {
   };
 
   selectedLine = svg_line_chart.select("#line_g").selectAll("path").filter(function (d) {
-
-    try {
-      return (category[0].type.includes(d.type))
-    } catch (e) {
       return d == category
+  });
+
+  selectedLine.attr("stroke-width","4");
+
+  // Update Area Chart
+  if(selectedViolin = null) {
+    selectedViolin.attr("fill", function(d) {
+      return "grey"
+    })
+  };
+  list_1 = [];
+  svg_violin_chart.selectAll("#area").data().forEach((item, i) => {
+    var list = item[0]["sk"];
+    for (x = 0; x < list.length; x++){
+      if (list[x]["key"] == category.type){
+        list_1.push(list[x]["val"])
+      }
     }
+  });
+  max = 0;
+  for (x = 0; x < list_1.length; x++){
+    if (max < list_1[x]){
+      max = list_1[x];
+    }
+  }
+  selectedViolin = svg_violin_chart.selectAll("#area").filter(function (d) {
+    if (max == 0) {
+      return true;
+    } else {
+      list = d[0].sk
+      for (x = 0; x < list.length; x++){
+        if (list[x]["val"] == max){
+          return true;
+        }
+      }
+    }
+  });
+
+  selectedViolin.attr("fill", function(d) {
+    return line_color(category.type);
+  });
+
+});
+
+dispatch_a.on("areaEvent", function (category) {
+  list = category[0].sk;
+  list = list.sort(function (a, b) {
+    return b.val - a.val
+  });
+  //$('.selectpicker').val()
+
+  if (selectedLine != null) {
+    selectedLine.attr("stroke-width","1.5");
+  }
+
+  if (selectedViolin != null) {
+    selectedViolin.attr("fill", "grey")
+  };
+
+  selectedLine = svg_line_chart.select("#line_g").selectAll("path").filter(function (d) {
+    return list[0]["key"] === d.type;
   });
 
   selectedLine.attr("stroke-width","4");
@@ -991,35 +1362,644 @@ dispatch.on("lineEvent", function (category) {
     })
   };
 
+
   selectedViolin = svg_violin_chart.selectAll("#area").filter(function (d) {
-    return (d[0].type.includes(category.type)) || category == d;
+    return category == d;
   });
 
   selectedViolin.attr("fill", function(d) {
-    return line_color(category.type);
+    return line_color(list[0]["key"]);
   });
 
 });
 
 dispatch_sa.on("sankeyEvent", function (data) {
+  if (selectedLink != null){
+      selectedLink.attr("stroke-opacity",0.5);
+  }
+  console.log(data);
+
+  index_list = []
+
+  index_list.push(data["index"]);
+  if (data.source.sourceLinks.length > 0){
+    for (x = 0; x < data.source.targetLinks.length; x++){
+      index_list.push(data.source.targetLinks[x].index);
+    }
+  }
+  if (data.target.sourceLinks.length > 0){
+    for (x = 0; x < data.target.sourceLinks.length; x++){
+      index_list.push(data.target.sourceLinks[x].index);
+    }
+  }
+  console.log(index_list);
+  console.log(data["index"]);
+  selectedLink = svg_sankey.selectAll("path").filter(function (d) {
+    return index_list.includes(d["index"]);
+  });
+
+  //index == link-index > id
+
+  selectedLink.attr("stroke-opacity",1);
+
 })
 };
+function create_content(player, clubs){
+ var attri = "";
+  switch (current_check) {
+    case "wage_eur_": attri = "Wage in €: ";break;
+    case "value_eur_": attri = "Value in €: ";break;
+    case "overall_": attri = "Overall: ";break;
+    case "Skill_Mean_": attri = "Skill: ";break;
+    case "Defending_Mean_": attri = "Defending: ";break;
+    case "Attacking_Mean_": attri = "Attacking: ";break;
+    case "Movement_Mean_": attri = "Movement: ";break;
+    case "Mentality_Mean_": attri = "Mentality: ";break;
+    case "Gk_Mean_": attri = "Goalkeeping: ";break;
+    case "potential_": attri = "Potential: ";break;
+  };
+  if (player.length == 3 && clubs.length == 3){
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+      <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[2]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" id="p3" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[2]["key"]}<br>${attri} ${Math.trunc(clubs[2]["val"])}</div>
+      <a href="#" id="c3" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 3 && clubs.length == 2) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[2]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" id="p3" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="p2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 3 && clubs.length == 1) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[2]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" id="p3" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 3 && clubs.length == 0) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[2]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" id="p3" class="btn btn-link">Select</a>
+     </div>
+     </div>
+      </div>
+      </div>
+    `
+  }
+  else if (player.length == 2 && clubs.length == 3){
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[2]["key"]}<br>${attri} ${Math.trunc(clubs[2]["val"])}</div>
+      <a href="#" id="c3" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 2 && clubs.length == 2) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[1]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 2 && clubs.length == 1) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[1]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" id="p2" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 2 && clubs.length == 0) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+     <div class="card-text">${player[2]["key"]} <br> ${attri} ${Math.trunc(player[2]["val"])}</div>
+     <a href="#" class="btn btn-link">Select</a>
+     </div>
+     </div>
+      </div>
+      </div>
+    `
+  }
+  else if (player.length == 1 && clubs.length == 3){
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[2]["key"]}<br>${attri} ${Math.trunc(clubs[2]["val"])}</div>
+      <a href="#" id="c3" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 1 && clubs.length == 2) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 1 && clubs.length == 1) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+     </div>
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 1 && clubs.length == 0) {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text">${player[0]["key"]} <br> ${attri} ${Math.trunc(player[0]["val"])}</div>
+     <a href="#" id="p1" class="btn btn-link">Select</a>
+     </div>
+     </div>
+      </div>
+      </div>
+    `
+  }
+  else if (player.length == 0 && clubs.length == 3){
+    string = `
+    <div class="container">
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[2]["key"]}<br>${attri} ${Math.trunc(clubs[2]["val"])}</div>
+      <a href="#" id="c3" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 0 && clubs.length == 2) {
+    string = `
+    <div class="container">
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      <div class="card text=center" style="width: 10rem;">
+      <div class="card-body">
+      <div class="card-text">${clubs[1]["key"]}<br>${attri} ${Math.trunc(clubs[1]["val"])}</div>
+      <a href="#" id="c2" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else if( player.length == 0 && clubs.length == 1) {
+    string = `
+    <div class="container">
+     <div class="col-sm">
+     <div class="card text=center" style="width: 10rem;">
+     <div class="card-body">
+      <div class="card-text">${clubs[0]["key"]}<br>${attri} ${Math.trunc(clubs[0]["val"])}</div>
+      <a href="#" id="c1" class="btn btn-link">Select</a>
+      </div>
+      </div>
+      </div>
+      </div>
+    `
+  }
+  else {
+    string = `
+    <div class="container">
+    <div class="col-sm">
+    <div class="card text=center" style="width: 10rem;">
+    <div class="card-body">
+     <div class="card-text"> No Data available</div>
+     </div>
+      </div>
+      </div>
+    `
+  }
+
+  return string;
+}
+function get_top_player(country){
+  var temp = create_data("nationality", country);
+
+  var list = []
+
+  temp.forEach((item, i) => {
+    list.push({
+      key: item["long_name"],
+      val: item[current_check + current_year]
+    })
+  });
+  list = list.sort(function (a, b) {
+    return b.val - a.val
+  });
+  return list.slice(0,3)
+}
+function get_top_clubs(country){
+  function onlyUnique(value, index, self) {
+  return self.indexOf(value) === index;
+  }
+
+
+  foo = data_c.filter(function (d) { if (d["Country"] === country) {return d;}});
+
+  var fish = foo.map(d => d["Club"]);
+
+  var temp = data.filter(function (d) {if (fish.includes(d["club_" + current_year])) {return d;}})
+
+  var list = [];
+
+  x = temp.map(d => d["club_" + current_year]);
+  x_uni = x.filter(onlyUnique);
+  for (y= 0; y < x_uni.length; y++){
+    value  = temp.map(function(d) {if(d["club_" + current_year] == x_uni[y]) {return d[current_check + current_year] }});
+    list.push({
+      key: x_uni[y],
+      val: d3.mean(value),
+    })
+  }
+  list = list.sort(function (a, b) {
+    return b.val - a.val
+  });
+
+  return list.slice(0,3)
+}
 
 function update_area_Chart(y,x,index,data,node_b, node_a) {
   bins =  d3.bin().thresholds(20)(data.map(d=>d.height_cm))
   bins.map(function (d) {
     switch(index) {
       case 1:
-      d.type = ["overall",'potential','Gk_Mean'];
+      d.type = ["Goalkeeper"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 2:
-      d.type = ["overall",'potential','Defending_Mean','Mentality_Mean']
+      d.type = ["Defender"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 3:
-      d.type = ["overall",'potential','Movement_Mean']
+      d.type = ["Center"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
       case 4:
-      d.type = ["overall",'potential','Skill_Mean','Attacking_Mean']
+      d.type = ["Attacker"];
+      d.sk = [{
+        key: "Attacking_Mean",
+        val: d3.mean( data.map(d => parseInt(d["Attacking_Mean_" + current_year])))
+        },
+        {key: "Defending_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Defending_Mean_" + current_year])))
+      },
+      {key: "Movement_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Movement_Mean_" + current_year])))
+      },
+      {key: "Skill_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Skill_Mean_" + current_year])))
+      },
+      {key: "Mentality_Mean",
+      val: d3.mean( data.map(d => parseInt(d["Mentality_Mean_" + current_year])))
+      },
+      {key: "Gk_Mean",
+      val: d3.mean(data.map(d => parseInt(d["Gk_Mean_" + current_year])))
+      },
+    ];
       break;
     }
   });
@@ -1091,8 +2071,37 @@ test.selectAll("toto")
 }
 
 function update_choropleth(attribute){
+
+  var temp = data.map(d => d["nationality"]);
+
+
+  function onlyUnique(value, index, self) {
+  return self.indexOf(value) === index;
+  }
+
+  var list = [];
+
+  x_uni = temp.filter(onlyUnique);
+  for (y= 0; y < x_uni.length; y++){
+    value  = data.map(function(d) {if(d["nationality"] == x_uni[y]) {return parseInt(d[current_check + current_year]) }});
+    list.push({
+      key: x_uni[y],
+      val: d3.mean(value),
+    })
+  };
+
+  list = list.sort(function (a, b) {
+    return b.val - a.val
+  });
+
+  var myColor = d3.scaleLinear()
+  .domain([list[list.length-1].val,list[0].val])
+  .range([0.05,1]);
+
+  countryColor = myColor;
+
   svg_choropleth.selectAll("path")
-    .style("fill", d => getValue(d.properties.name, attribute + current_year));
+    .style("fill", d => getValue(d.properties.name, list));
 }
 
 function create_lineChart_data (data) {
@@ -1151,11 +2160,37 @@ function create_sankey_data(country) {
   var temp = data.filter(function (d) {if (fish.includes(d["club_" + current_year])) {return d;}})
 
 
+  function onlyUnique(value, index, self) {
+  return self.indexOf(value) === index;
+  }
+
+  var list = [];
+
+  x = temp.map(d => d["club_" + current_year]);
+  x_uni = x.filter(onlyUnique);
+  for (y= 0; y < x_uni.length; y++){
+    value  = temp.map(function(d) {if(d["club_" + current_year] == x_uni[y]) {return d[current_check + current_year] }});
+    list.push({
+      key: x_uni[y],
+      val: d3.mean(value),
+    })
+  }
+  list = list.sort(function (a, b) {
+    return b.val - a.val
+  });
+  list = list.slice(15)
+
+
+  var temp_c = [];
+  for ( z = 0; z< list.length; z++){
+    temp_c.push(list[z]["key"])
+  };
   var temp_club = [];
   var temp_pos = [];
   var temp_srat = [];
+
   temp.forEach(function (d){
-    if (!temp_club.includes(d["club_" + current_year])){
+    if (!temp_club.includes(d["club_" + current_year]) && !temp_c.includes(d["club_" + current_year])){
       graph.nodes.push({name: d["club_" + current_year]});
       temp_club.push(d["club_" + current_year]);
     }
@@ -1182,11 +2217,13 @@ function create_sankey_data(country) {
       }
     }
     if (flag) {
+      if (!temp_c.includes(d["club_" + current_year])) {
       graph.links.push({
         "source": d["club_" + current_year],
         "target": d["Star_rating_" + current_year],
         "value": +d["value_eur_" + current_year]
           });
+        }
       };
 
       flag2 = true;

@@ -8,9 +8,9 @@ animate boxplot/area chart
 
 Make tooltip fo players name
 
-map + other attirbutes
+sankey interactive
 
-select year
+checkbox when selecting line
 
 select player/club select nationality
 
