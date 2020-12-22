@@ -61,7 +61,7 @@ function create_button_row() {
   team15= data.map (d => d.club_15)
 
   var team = team20.concat(team19).concat(team18).concat(team17).concat(team16).concat(team15);
-  team = team.filter((v, i, a) => a.indexOf(v) === i);
+  team = team20.filter((v, i, a) => a.indexOf(v) === i);
   country = country.filter((v, i, a) => a.indexOf(v) === i);
 
 
@@ -972,7 +972,7 @@ if (!flag) {  draw = d3.line()
   .attr("stroke-linejoin", "round")
   .attr("d",d => draw(d.values));
 
-
+  console.log(ndataset.series);
   svg_line_chart.select("#line_g").selectAll("path").each(function(dat) {
     svg_line_chart.select("#line_g").selectAll("#" + dat.type).selectAll("circle")
     .data(dat.values)
@@ -989,6 +989,7 @@ if (!flag) {  draw = d3.line()
   g_l.transition().duration(3000).attr("style","opacity: 1;");
 
 }
+
 
   gk_data = dataset.filter(function(d){if (d["team_position_" + year] == "GK") {return d;}});
   def_data = dataset.filter(function(d){if (defend_position.includes(d["team_position_" + year])) {return d;}});
@@ -1038,6 +1039,7 @@ if (!flag) {  draw = d3.line()
     def = dataset.filter(function(d){if (defend_position.includes(d["team_position_"+ year])) {return d;}});
     cen = dataset.filter(function(d){if (center_position.includes(d["team_position_"+ year])) {return d;}});
     att = dataset.filter(function(d){if (attack_position.includes(d["team_position_"+ year])) {return d;}});
+    if (gk.length > 0){
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", x.bandwidth()*0.5)
@@ -1050,7 +1052,8 @@ if (!flag) {  draw = d3.line()
     .attr("x", x.bandwidth()*0.5)
     .attr("y", y(d3.mean(gk,d => d.height_cm))-10)
     .text(temp);
-
+    }
+    if (def.length > 0) {
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", x.bandwidth()*1.5)
@@ -1063,7 +1066,8 @@ if (!flag) {  draw = d3.line()
     .attr("x", x.bandwidth()*1.5)
     .attr("y", y(d3.mean(def,d => d.height_cm))-10)
     .text(temp);
-
+    }
+    if (cen.length > 0){
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", x.bandwidth()*2.5)
@@ -1076,7 +1080,8 @@ if (!flag) {  draw = d3.line()
     .attr("x", x.bandwidth()*2.5)
     .attr("y", y(d3.mean(cen,d => d.height_cm))-10)
     .text(temp);
-
+    }
+    if (att.length > 0){
     g_b.append("circle")
     .attr("r", 2.5)
     .attr("cx", x.bandwidth()*3.5)
@@ -1089,6 +1094,7 @@ if (!flag) {  draw = d3.line()
     .attr("x", x.bandwidth()*3.5)
     .attr("y", y(d3.mean(att,d => d.height_cm))-10)
     .text(temp);
+    }
   }
 
 
@@ -1101,9 +1107,10 @@ if (!flag) {  draw = d3.line()
 
   if (gk_data.length != 0) {update_area_Chart(y,x,1,gk_data,g_b,g_a);};
 
-  if (type == "p"){
-    attribute = data_c.filter(function (d)  {if (d.Club == dataset[0]["club_" + year]) {return d;}})[0].Country
-  }
+  // if (type == "t"){
+  //   console.log(attribute);
+  //   attribute = data_c.filter(function (d)  {if (d.Club == dataset[0]["club_" + year]) {return d;}})[0].Country
+  // }
   update_sankey_diagram(attribute);
   prepare_event();
 }
@@ -1240,7 +1247,8 @@ function prepare_event() {
       .duration(500)
       .style("opacity", 0);
     });
-dispatch_s.on("choroplethSelect", function (country) {
+    dispatch_s.on("choroplethSelect", function (country) {
+      console.log(country)
   if (selectedCountry != null){
     selectedCountry.style("stroke", "white");
     selectedCountry.style("stroke-width", "0.3px");
@@ -1330,7 +1338,7 @@ dispatch_s.on("choroplethSelect", function (country) {
 
 });
 
-dispatch_k.on("lineSelect", function(line) {
+  dispatch_k.on("lineSelect", function(line) {
 
   current_check = line.type + "_";
 
@@ -1338,7 +1346,7 @@ dispatch_k.on("lineSelect", function(line) {
   update_choropleth(current_check);
 
 });
-dispatch_m.on("sankeyClick", function (node) {
+  dispatch_m.on("sankeyClick", function (node) {
   console.log(node);
   if(node.targetLinks.length == 0){
     current_value = node.name;
@@ -1367,7 +1375,7 @@ dispatch_m.on("sankeyClick", function (node) {
   }
 });
 
-dispatch_w.on("choroplethEvent", function (country){
+  dispatch_w.on("choroplethEvent", function (country){
   if (selectedPath != null && selectedPath.datum().properties.name != temp) {
     selectedPath.style("stroke", "white");
     selectedPath.style("stroke-width", "0.3px");
@@ -1390,7 +1398,7 @@ dispatch_w.on("choroplethEvent", function (country){
     }
 });
 
-dispatch.on("lineEvent", function (category) {
+  dispatch.on("lineEvent", function (category) {
   // Update Line Chart
 
   if (selectedLine != null) {
@@ -1447,7 +1455,7 @@ dispatch.on("lineEvent", function (category) {
 
 });
 
-dispatch_a.on("areaEvent", function (category) {
+  dispatch_a.on("areaEvent", function (category) {
   list = category[0].sk;
   list = list.sort(function (a, b) {
     return b.val - a.val
@@ -1486,7 +1494,7 @@ dispatch_a.on("areaEvent", function (category) {
 
 });
 
-dispatch_sa.on("sankeyEvent", function (data) {
+  dispatch_sa.on("sankeyEvent", function (data) {
   if (selectedLink != null){
       selectedLink.attr("stroke-opacity",0.5);
   }
