@@ -176,7 +176,6 @@ function create_button_row() {
       if(d["Club"] === current_value)
       {return d;}
     });
-    console.log(temp);
     if (selectedCountry != null){
       selectedCountry.style("stroke", "black");
       selectedCountry.style("stroke-width", "0.3px");
@@ -2353,10 +2352,14 @@ function create_sankey_data(country) {
   });
   list = list.slice(15)
 
+  console.log(list);
+
 
   var temp_c = [];
   for ( z = 0; z< list.length; z++){
-    temp_c.push(list[z]["key"])
+    if(list[z]["key"] != current_value){
+      temp_c.push(list[z]["key"])
+    }
   };
   var temp_club = [];
   var temp_pos = [];
