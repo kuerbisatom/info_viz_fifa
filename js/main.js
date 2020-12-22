@@ -744,6 +744,17 @@ let nodes = svg
       .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
       .text(d => d.name);
 
+      svg
+      .append("text")
+      .attr("id","l_display")
+      .attr(
+        "transform",
+        "translate(" + width/3 + "," + 0 + ")"
+      )
+      .attr("class", "label")
+      .attr("style","font-size:12px")
+      .text("Flow of Money(Wage in Euro)");
+
 
     svg_sankey = svg;
 
@@ -1551,6 +1562,7 @@ function create_content(player, clubs){
   if (player.length == 3 && clubs.length == 3){
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1571,6 +1583,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1597,6 +1610,7 @@ function create_content(player, clubs){
   else if( player.length == 3 && clubs.length == 2) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1617,6 +1631,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1637,6 +1652,7 @@ function create_content(player, clubs){
   else if( player.length == 3 && clubs.length == 1) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1657,6 +1673,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1671,6 +1688,7 @@ function create_content(player, clubs){
   else if( player.length == 3 && clubs.length == 0) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1697,6 +1715,7 @@ function create_content(player, clubs){
   else if (player.length == 2 && clubs.length == 3){
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1711,6 +1730,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1737,6 +1757,7 @@ function create_content(player, clubs){
   else if( player.length == 2 && clubs.length == 2) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1751,6 +1772,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1771,6 +1793,7 @@ function create_content(player, clubs){
   else if( player.length == 2 && clubs.length == 1) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1785,6 +1808,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1799,6 +1823,7 @@ function create_content(player, clubs){
   else if( player.length == 2 && clubs.length == 0) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1819,6 +1844,7 @@ function create_content(player, clubs){
   else if (player.length == 1 && clubs.length == 3){
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1827,6 +1853,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1853,6 +1880,7 @@ function create_content(player, clubs){
   else if( player.length == 1 && clubs.length == 2) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1861,6 +1889,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1881,6 +1910,7 @@ function create_content(player, clubs){
   else if( player.length == 1 && clubs.length == 1) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1889,6 +1919,7 @@ function create_content(player, clubs){
      </div>
      </div>
      </div>
+         <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1903,6 +1934,7 @@ function create_content(player, clubs){
   else if( player.length == 1 && clubs.length == 0) {
     string = `
     <div class="container">
+    <b>Player</b><hr>
     <div class="col-sm">
     <div class="card text=center" style="width: 10rem;">
     <div class="card-body">
@@ -1917,6 +1949,7 @@ function create_content(player, clubs){
   else if (player.length == 0 && clubs.length == 3){
     string = `
     <div class="container">
+        <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1943,6 +1976,7 @@ function create_content(player, clubs){
   else if( player.length == 0 && clubs.length == 2) {
     string = `
     <div class="container">
+        <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
@@ -1963,6 +1997,7 @@ function create_content(player, clubs){
   else if( player.length == 0 && clubs.length == 1) {
     string = `
     <div class="container">
+    <b>Club</b><hr>
      <div class="col-sm">
      <div class="card text=center" style="width: 10rem;">
      <div class="card-body">
